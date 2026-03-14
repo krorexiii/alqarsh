@@ -1,0 +1,259 @@
+import 'package:alkhafajdashboard/data/api/supabaseApi.dart';
+import 'package:alkhafajdashboard/data/model/bannerAdsModel.dart';
+import 'package:alkhafajdashboard/data/model/categoryModel.dart';
+import 'package:alkhafajdashboard/data/model/deliveryZoneModel.dart';
+import 'package:alkhafajdashboard/data/model/itemImageModel.dart';
+import 'package:alkhafajdashboard/data/model/itemModel.dart';
+import 'package:alkhafajdashboard/data/model/partItemModel.dart';
+import 'package:alkhafajdashboard/data/model/partModel.dart';
+import 'package:alkhafajdashboard/data/model/orders/order_model.dart';
+import 'package:alkhafajdashboard/data/model/session_user_model.dart';
+import 'package:alkhafajdashboard/data/model/userModel.dart';
+import 'dart:typed_data';
+
+class Repository {
+  final SupabaseApi supabaseApi = SupabaseApi();
+
+  login({required String username, required String password}) async {
+    return await supabaseApi.login(user: username, password: password);
+  }
+
+  Future<SessionUserModel?> fetchCurrentSessionUser() async {
+    return await supabaseApi.fetchCurrentSessionUser();
+  }
+
+  fetchLocations() async {
+    return await supabaseApi.fetchLocations();
+  }
+
+  fetchUsers() async {
+    return await supabaseApi.fetchUsers();
+  }
+
+  addUser({required UserModel user}) async {
+    await supabaseApi.addUser(user: user);
+  }
+
+  Future<List<dynamic>> fetchBannerAds() async {
+    return await supabaseApi.fetchBannerAds();
+  }
+
+  Future<String> uploadBannerImage({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    return await supabaseApi.uploadBannerImage(
+      bytes: bytes,
+      fileName: fileName,
+    );
+  }
+
+  String getBannerImagePublicUrl(String imagePath) {
+    return supabaseApi.getBannerImagePublicUrl(imagePath);
+  }
+
+  Future<String> uploadCategoryImage({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    return await supabaseApi.uploadCategoryImage(
+      bytes: bytes,
+      fileName: fileName,
+    );
+  }
+
+  String getCategoryImagePublicUrl(String imagePath) {
+    return supabaseApi.getCategoryImagePublicUrl(imagePath);
+  }
+
+  Future<void> addBannerAd({required BannerAdsModel bannerAd}) async {
+    await supabaseApi.addBannerAd(bannerAd: bannerAd);
+  }
+
+  Future<void> updateBannerAd({required BannerAdsModel bannerAd}) async {
+    await supabaseApi.updateBannerAd(bannerAd: bannerAd);
+  }
+
+  Future<void> deleteBannerAd({required BannerAdsModel bannerAd}) async {
+    await supabaseApi.deleteBannerAd(bannerAd: bannerAd);
+  }
+
+  Future<void> updateBannerAdsOrder({required List<BannerAdsModel> ads}) async {
+    await supabaseApi.updateBannerAdsOrder(ads: ads);
+  }
+
+  Future<List<dynamic>> fetchCategories() async {
+    return await supabaseApi.fetchCategories();
+  }
+
+  Future<void> addCategory({required CategoryModel category}) async {
+    await supabaseApi.addCategory(category: category);
+  }
+
+  Future<void> updateCategory({required CategoryModel category}) async {
+    await supabaseApi.updateCategory(category: category);
+  }
+
+  Future<void> deleteCategory({required CategoryModel category}) async {
+    await supabaseApi.deleteCategory(category: category);
+  }
+
+  Future<List<dynamic>> fetchDeliveryZones() async {
+    return await supabaseApi.fetchDeliveryZones();
+  }
+
+  Future<void> addDeliveryZone({
+    required DeliveryZoneModel deliveryZone,
+  }) async {
+    await supabaseApi.addDeliveryZone(deliveryZone: deliveryZone);
+  }
+
+  Future<void> updateDeliveryZone({
+    required DeliveryZoneModel deliveryZone,
+  }) async {
+    await supabaseApi.updateDeliveryZone(deliveryZone: deliveryZone);
+  }
+
+  Future<void> deleteDeliveryZone({required int deliveryZoneId}) async {
+    await supabaseApi.deleteDeliveryZone(deliveryZoneId: deliveryZoneId);
+  }
+
+  Future<List<dynamic>> fetchItems({bool includeDeleted = false}) async {
+    return await supabaseApi.fetchItems(includeDeleted: includeDeleted);
+  }
+
+  Future<List<dynamic>> fetchItemsByCategory({
+    required String categoryId,
+    bool includeDeleted = false,
+  }) async {
+    return await supabaseApi.fetchItemsByCategory(
+      categoryId: categoryId,
+      includeDeleted: includeDeleted,
+    );
+  }
+
+  Future<void> addItem({required ItemModel item}) async {
+    await supabaseApi.addItem(item: item);
+  }
+
+  Future<void> updateItem({required ItemModel item}) async {
+    await supabaseApi.updateItem(item: item);
+  }
+
+  Future<void> softDeleteItem({required int itemId}) async {
+    await supabaseApi.softDeleteItem(itemId: itemId);
+  }
+
+  Future<void> restoreItem({required int itemId}) async {
+    await supabaseApi.restoreItem(itemId: itemId);
+  }
+
+  Future<void> deleteItemPermanently({required int itemId}) async {
+    await supabaseApi.deleteItemPermanently(itemId: itemId);
+  }
+
+  Future<String> uploadItemImage({
+    required Uint8List bytes,
+    required String fileName,
+    int? itemId,
+  }) async {
+    return await supabaseApi.uploadItemImage(
+      bytes: bytes,
+      fileName: fileName,
+      itemId: itemId,
+    );
+  }
+
+  String getItemImagePublicUrl(String imagePath) {
+    return supabaseApi.getItemImagePublicUrl(imagePath);
+  }
+
+  Future<List<dynamic>> fetchItemImages({required int itemId}) async {
+    return await supabaseApi.fetchItemImages(itemId: itemId);
+  }
+
+  Future<void> addItemImage({required ItemImageModel itemImage}) async {
+    await supabaseApi.addItemImage(itemImage: itemImage);
+  }
+
+  Future<void> updateItemImage({required ItemImageModel itemImage}) async {
+    await supabaseApi.updateItemImage(itemImage: itemImage);
+  }
+
+  Future<void> deleteItemImage({required ItemImageModel itemImage}) async {
+    await supabaseApi.deleteItemImage(itemImage: itemImage);
+  }
+
+  Future<List<dynamic>> fetchParts() async {
+    return await supabaseApi.fetchParts();
+  }
+
+  Future<void> addPart({required PartModel part}) async {
+    await supabaseApi.addPart(part: part);
+  }
+
+  Future<void> updatePart({required PartModel part}) async {
+    await supabaseApi.updatePart(part: part);
+  }
+
+  Future<void> deletePart({required int partId}) async {
+    await supabaseApi.deletePart(partId: partId);
+  }
+
+  Future<void> updatePartsOrder({required List<PartModel> parts}) async {
+    await supabaseApi.updatePartsOrder(parts: parts);
+  }
+
+  Future<List<dynamic>> fetchPartItems({required int partId}) async {
+    return await supabaseApi.fetchPartItems(partId: partId);
+  }
+
+  Future<void> addPartItem({required PartItemModel partItem}) async {
+    await supabaseApi.addPartItem(partItem: partItem);
+  }
+
+  Future<void> deletePartItem({required int id}) async {
+    await supabaseApi.deletePartItem(id: id);
+  }
+
+  Future<void> replacePartItems({
+    required int partId,
+    required List<int> itemIds,
+  }) async {
+    await supabaseApi.replacePartItems(partId: partId, itemIds: itemIds);
+  }
+
+  Future<List<OrderModel>> fetchOrders() async {
+    return await supabaseApi.fetchOrders();
+  }
+
+  Future<void> assignOrderToLocation({
+    required int orderId,
+    required int locationId,
+    required String changedBy,
+    String? notes,
+  }) async {
+    await supabaseApi.assignOrderToLocation(
+      orderId: orderId,
+      locationId: locationId,
+      changedBy: changedBy,
+      notes: notes,
+    );
+  }
+
+  Future<void> updateOrderStatus({
+    required int orderId,
+    required String status,
+    required String changedBy,
+    int? locationId,
+    String? notes,
+  }) async {
+    await supabaseApi.updateOrderStatus(
+      orderId: orderId,
+      status: status,
+      changedBy: changedBy,
+      locationId: locationId,
+      notes: notes,
+    );
+  }
+}
