@@ -7,12 +7,13 @@ import 'package:get/get.dart';
 import '../../widget/myButton.dart';
 import '../../widget/myText.dart';
 import '../../widget/myTextFeild.dart';
+import 'resetPasswordScreen.dart';
 import '../orders/ordersScreen.dart';
 
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
 
-  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   @override
@@ -35,6 +36,23 @@ class LoginScreen extends StatelessWidget {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
               ..showSnackBar(snackBar);
+          } else if (state is AuthInfo) {
+            final snackBar = SnackBar(
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              behavior: SnackBarBehavior.floating,
+              content: AwesomeSnackbarContent(
+                title: 'معلومة',
+                message: state.message,
+                contentType: ContentType.help,
+              ),
+            );
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(snackBar);
+            if (state.message.contains('رمز التحقق')) {
+              Get.to(() => const ResetPasswordScreen());
+            }
           } else if (state is AuthSuccess) {
             final snackBar = SnackBar(
               elevation: 0,
@@ -100,9 +118,11 @@ class LoginScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 22),
                           MyTextFeild(
-                            labelText: "اسم المستخدم",
-                            icon: Icons.person_outline,
-                            controller: usernameController,
+                            labelText:
+                                "البريد الإلكتروني أو اسم المستخدم القديم",
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                            controller: emailController,
                           ),
                           MyTextFeild(
                             labelText: "كلمة المرور",
@@ -111,6 +131,19 @@ class LoginScreen extends StatelessWidget {
                             controller: passwordController,
                           ),
 
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: isLoading
+                                  ? null
+                                  : () => _showResetPasswordDialog(
+                                      context,
+                                      cubit,
+                                      emailController.text.trim(),
+                                    ),
+                              child: const Text('نسيت كلمة المرور؟'),
+                            ),
+                          ),
                           const SizedBox(height: 22),
                           MyButton(
                             text: isLoading
@@ -124,7 +157,7 @@ class LoginScreen extends StatelessWidget {
                                 ? null
                                 : () {
                                     cubit.login(
-                                      usernameController.text.trim(),
+                                      emailController.text.trim(),
                                       passwordController.text,
                                     );
                                   },
@@ -139,6 +172,56 @@ class LoginScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _showResetPasswordDialog(
+    BuildContext context,
+    AuthCubit cubit,
+    String initialEmail,
+  ) async {
+    final TextEditingController resetController = TextEditingController(
+      text: initialEmail,
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('إعادة ضبط كلمة المرور'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'أدخل بريد الموظف الإلكتروني، وسيتم إرسال رمز OTP إليه لإعادة ضبط كلمة المرور داخل التطبيق.',
+                ),
+                const SizedBox(height: 12),
+                MyTextFeild(
+                  labelText: 'البريد الإلكتروني',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  controller: resetController,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                cubit.sendPasswordReset(resetController.text.trim());
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('إرسال الرمز'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

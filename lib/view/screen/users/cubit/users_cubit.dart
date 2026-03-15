@@ -24,8 +24,9 @@ class UsersCubit extends Cubit<UsersState> {
   }) async {
     emit(UsersLoading());
     try {
+      final String email = username.trim();
       UserModel user = UserModel(
-        username: "$username@k.com",
+        username: email,
         password: password,
         name: name,
         role: ConstVar.roleList.firstWhere((r) => r.name == role).id,
@@ -45,7 +46,12 @@ class UsersCubit extends Cubit<UsersState> {
         // );
       }
       userId = null;
-      emit(UsersSuccess());
+      await fetchUsers();
+      emit(
+        UsersActionSuccess(
+          'تم إنشاء الموظف بنجاح، وسيصل بريد تأكيد إلى $email لتفعيل الحساب.',
+        ),
+      );
     } catch (e) {
       print("Save user failed with error: $e");
       emit(UsersError("فشل في حفظ المستخدم"));
@@ -69,6 +75,11 @@ class UsersCubit extends Cubit<UsersState> {
 
   selectUser(UserModel user) {
     userId = user.id;
+    emit(UsersLoaded());
+  }
+
+  clearSelection() {
+    userId = null;
     emit(UsersLoaded());
   }
 }

@@ -18,6 +18,21 @@ class Repository {
     return await supabaseApi.login(user: username, password: password);
   }
 
+  Future<void> resetPassword({required String email}) async {
+    await supabaseApi.resetPassword(email: email);
+  }
+
+  Future<void> verifyRecoveryOtp({
+    required String email,
+    required String otp,
+  }) async {
+    await supabaseApi.verifyRecoveryOtp(email: email, otp: otp);
+  }
+
+  Future<void> updatePassword({required String newPassword}) async {
+    await supabaseApi.updatePassword(newPassword: newPassword);
+  }
+
   Future<SessionUserModel?> fetchCurrentSessionUser() async {
     return await supabaseApi.fetchCurrentSessionUser();
   }

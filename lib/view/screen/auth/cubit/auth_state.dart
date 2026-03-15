@@ -7,9 +7,27 @@ final class AuthInitial extends AuthState {}
 
 final class AuthLoading extends AuthState {}
 
+final class AuthOtpVerified extends AuthState {
+  final String message;
+
+  AuthOtpVerified(this.message);
+}
+
+final class AuthPasswordUpdated extends AuthState {
+  final String message;
+
+  AuthPasswordUpdated(this.message);
+}
+
 final class AuthError extends AuthState {
   final String message;
   AuthError(this.message);
+}
+
+final class AuthInfo extends AuthState {
+  final String message;
+
+  AuthInfo(this.message);
 }
 
 final class AuthSuccess extends AuthState {

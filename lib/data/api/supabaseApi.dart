@@ -15,12 +15,32 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseApi {
   SupabaseClient supabase = Supabase.instance.client;
   String shopId = "550e8400-e29b-41d4-a716-446655440001";
+  static const String recoveryRedirectUrl = 'http://localhost:52157/';
 
   login({required String user, required String password}) async {
     return await supabase.auth.signInWithPassword(
       email: user,
       password: password,
     );
+  }
+
+  Future<void> resetPassword({required String email}) async {
+    await supabase.auth.resetPasswordForEmail(email);
+  }
+
+  Future<void> verifyRecoveryOtp({
+    required String email,
+    required String otp,
+  }) async {
+    await supabase.auth.verifyOTP(
+      email: email,
+      token: otp,
+      type: OtpType.recovery,
+    );
+  }
+
+  Future<void> updatePassword({required String newPassword}) async {
+    await supabase.auth.updateUser(UserAttributes(password: newPassword));
   }
 
   Future<SessionUserModel?> fetchCurrentSessionUser() async {
@@ -524,9 +544,14 @@ class SupabaseApi {
       password: user.password!,
     );
 
+    if (response.user == null) {
+      throw AuthException('تعذر إنشاء الحساب');
+    }
+
     await supabase.from('shop_users').insert({
       "name": user.name,
       "user_id": response.user?.id,
+      "username": user.username,
       "role": user.role,
       "shop_id": shopId,
       "location_id": user.locationId,

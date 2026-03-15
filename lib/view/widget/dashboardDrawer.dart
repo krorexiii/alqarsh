@@ -9,6 +9,9 @@ import 'package:alkhafajdashboard/view/screen/parts/partsScreen.dart';
 import 'package:alkhafajdashboard/view/screen/users/usersScreen.dart';
 import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../screen/users/cubit/users_cubit.dart';
 
 class DashboardDrawer extends StatelessWidget {
   const DashboardDrawer({super.key, required this.currentRoute});
@@ -89,7 +92,10 @@ class DashboardDrawer extends StatelessWidget {
                     title: 'إدارة المستخدمين',
                     icon: Icons.people_outline,
                     isSelected: currentRoute == 'users',
-                    onTap: () => _openPage(context, 'users', UsersScreen()),
+                    onTap: () {
+                      BlocProvider.of<UsersCubit>(context).fetchUsers();
+                      _openPage(context, 'users', UsersScreen());
+                    },
                   ),
                   _DrawerTile(
                     title: 'إدارة الإعلانات',

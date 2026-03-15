@@ -14,4 +14,10 @@ final class UsersError extends UsersState {
 
 final class UsersSuccess extends UsersState {}
 
+final class UsersActionSuccess extends UsersState {
+  final String message;
+
+  UsersActionSuccess(this.message);
+}
+
 final class UsersLoaded extends UsersState {}
