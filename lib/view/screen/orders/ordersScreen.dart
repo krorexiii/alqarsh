@@ -114,7 +114,7 @@ class _OrdersHeader extends StatelessWidget {
                 Text(
                   cubit.isAdmin
                       ? 'الأدمن يراجع الطلبات الجديدة ويحوّلها إلى أقرب موقع مناسب.'
-                      : 'أنت ترى فقط الطلبات المحولة إلى موقعك لتجهيزها أو رفضها.',
+                      : 'تُعرض جميع الطلبات هنا لمتابعتها وتجهيزها وتحديث حالتها.',
                   style: TextStyle(color: Colors.grey.shade700),
                 ),
               ],

@@ -63,7 +63,14 @@ class SupabaseApi {
   }
 
   fetchLocations() async {
-    return await supabase.from('location').select().eq("shop_id", shopId);
+    try {
+      return await supabase
+          .from('sotre_location')
+          .select()
+          .eq("shop_id", shopId);
+    } catch (_) {
+      return await supabase.from('location').select().eq("shop_id", shopId);
+    }
   }
 
   fetchUsers() async {
@@ -468,18 +475,120 @@ class SupabaseApi {
   }
 
   Future<List<OrderModel>> fetchOrders() async {
-    final List<dynamic> response = await supabase
-        .from('orders')
-        .select(
-          '*, customers(name, phone, l_x, l_y), assigned_location:location!orders_assigned_location_id_fkey(id, name, location_name), order_items(*), order_status_history(*)',
-        )
-        .eq('shop_id', shopId)
-        .order('created_at', ascending: false);
+    try {
+      final List<dynamic> response = await supabase
+          .from('orders')
+          .select(
+            '*, customers(name, phone), order_items(*), order_status_history(*)',
+          )
+          .eq('shop_id', shopId)
+          .order('created_at', ascending: false);
 
-    return response
+      return await _composeOrdersWithNewLocations(response);
+    } catch (e) {
+      print('fetchOrders relational query failed, fallback to basic query: $e');
+
+      final List<dynamic> fallback = await supabase
+          .from('orders')
+          .select('*')
+          .eq('shop_id', shopId)
+          .order('created_at', ascending: false);
+
+      return await _composeOrdersWithNewLocations(fallback);
+    }
+  }
+
+  Future<List<OrderModel>> _composeOrdersWithNewLocations(
+    List<dynamic> orderRows,
+  ) async {
+    final List<Map<String, dynamic>> orders = orderRows
         .whereType<Map<String, dynamic>>()
-        .map(OrderModel.fromJson)
         .toList();
+
+    if (orders.isEmpty) {
+      return <OrderModel>[];
+    }
+
+    final Set<int> customerIds = orders
+        .map((row) => row['customer_id'])
+        .whereType<int>()
+        .toSet();
+
+    final Set<int> assignedLocationIds = orders
+        .map((row) => row['assigned_location_id'])
+        .whereType<int>()
+        .toSet();
+
+    final Map<int, Map<String, dynamic>> customerLocationByCustomerId =
+        <int, Map<String, dynamic>>{};
+    if (customerIds.isNotEmpty) {
+      final List<dynamic> customerLocationRows = await supabase
+          .from('location')
+          .select(
+            'id, customer_id, location_name, full_address, "L_X", "L_y", is_default, updated_at',
+          )
+          .eq('shop_id', shopId)
+          .inFilter('customer_id', customerIds.toList())
+          .order('is_default', ascending: false)
+          .order('updated_at', ascending: false);
+
+      for (final row
+          in customerLocationRows.whereType<Map<String, dynamic>>()) {
+        final int? customerId = row['customer_id'] as int?;
+        if (customerId == null) {
+          continue;
+        }
+        customerLocationByCustomerId.putIfAbsent(customerId, () => row);
+      }
+    }
+
+    final Map<int, Map<String, dynamic>> storeLocationById =
+        <int, Map<String, dynamic>>{};
+    if (assignedLocationIds.isNotEmpty) {
+      final List<dynamic> storeLocationRows = await supabase
+          .from('sotre_location')
+          .select('id, name, location_name, "L_X", "L_y"')
+          .inFilter('id', assignedLocationIds.toList());
+
+      for (final row in storeLocationRows.whereType<Map<String, dynamic>>()) {
+        final int? id = row['id'] as int?;
+        if (id != null) {
+          storeLocationById[id] = row;
+        }
+      }
+    }
+
+    final List<Map<String, dynamic>> normalizedRows = orders.map((row) {
+      final int? customerId = row['customer_id'] as int?;
+      final int? assignedLocationId = row['assigned_location_id'] as int?;
+
+      final Map<String, dynamic>? customerLoc = customerId == null
+          ? null
+          : customerLocationByCustomerId[customerId];
+      final Map<String, dynamic>? storeLoc = assignedLocationId == null
+          ? null
+          : storeLocationById[assignedLocationId];
+
+      return <String, dynamic>{
+        ...row,
+        if (customerLoc != null)
+          'customer_lat': (customerLoc['L_X'] as num?)?.toDouble(),
+        if (customerLoc != null)
+          'customer_lng': (customerLoc['L_y'] as num?)?.toDouble(),
+        if (customerLoc != null)
+          'customer_location_name':
+              (customerLoc['full_address'] ?? customerLoc['location_name'])
+                  ?.toString(),
+        if (storeLoc != null)
+          'assigned_location': {
+            'id': storeLoc['id'],
+            'name': (storeLoc['name'] ?? '').toString(),
+            'location_name': (storeLoc['location_name'] ?? '').toString(),
+          },
+      };
+    }).toList();
+
+    return normalizedRows.map(OrderModel.fromJson).toList();
   }
 
   Future<void> assignOrderToLocation({

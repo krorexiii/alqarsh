@@ -78,14 +78,20 @@ class OrderModel {
           : DateTime.tryParse(json['updated_at'].toString()),
       customerLat:
           (customerJson?['l_x'] as num?)?.toDouble() ??
+          (customerJson?['L_X'] as num?)?.toDouble() ??
           (json['customer_lat'] as num?)?.toDouble() ??
           0,
       customerLng:
           (customerJson?['l_y'] as num?)?.toDouble() ??
+          (customerJson?['L_y'] as num?)?.toDouble() ??
           (json['customer_lng'] as num?)?.toDouble() ??
           0,
-      customerName: (customerJson?['name'] ?? json['customer_name'] ?? 'عميل')
-          .toString(),
+      customerName:
+          (customerJson?['name'] ??
+                  json['customer_name'] ??
+                  json['customer_location_name'] ??
+                  'عميل')
+              .toString(),
       customerPhone: (customerJson?['phone'] ?? json['customer_phone'] ?? '')
           .toString(),
       assignedLocationId:

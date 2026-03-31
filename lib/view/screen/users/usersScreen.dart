@@ -116,7 +116,7 @@ class _UsersScreenState extends State<UsersScreen> {
       backgroundColor: const Color(0xfff6f7fb),
       body: Container(
         padding: const EdgeInsets.all(12),
-        child: Column(
+        child: Column( 
           children: [
             Builder(
               builder: (context) => const MyAppbar(

@@ -17,8 +17,14 @@ class LocationModel {
     return LocationModel(
       id: json['id'],
       name: json['name'],
-      lX: json['l_x']?.toDouble() ?? 0.0,
-      lY: json['l_y']?.toDouble() ?? 0.0,
+      lX:
+          (json['l_x'] as num?)?.toDouble() ??
+          (json['L_X'] as num?)?.toDouble() ??
+          0.0,
+      lY:
+          (json['l_y'] as num?)?.toDouble() ??
+          (json['L_y'] as num?)?.toDouble() ??
+          0.0,
       locationName: json['location_name'] ?? '',
     );
   }

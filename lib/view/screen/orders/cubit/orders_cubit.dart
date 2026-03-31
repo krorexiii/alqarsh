@@ -31,21 +31,14 @@ class OrdersCubit extends Cubit<OrdersState> {
       orders = await _repository.fetchOrders();
       emit(OrdersLoaded());
     } catch (e) {
-      emit(OrdersError('فشل في جلب الطلبات'));
+      emit(OrdersError('فشل في جلب الطلبات: ${e.toString()}'));
     }
   }
 
   bool get isAdmin => currentUser?.isAdmin ?? false;
 
   List<OrderModel> get visibleOrders {
-    if (isAdmin) {
-      return orders;
-    }
-
-    final int locationId = currentUser?.locationId ?? -1;
-    return orders
-        .where((order) => order.assignedLocationId == locationId)
-        .toList();
+    return orders;
   }
 
   SuggestedLocation? getSuggestedLocation(OrderModel order) {
