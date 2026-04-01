@@ -271,4 +271,46 @@ class Repository {
       notes: notes,
     );
   }
+
+  // ─── Notifications ───────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchNotifications() async {
+    return await supabaseApi.fetchNotifications();
+  }
+
+  Future<void> sendBroadcastNotification({
+    required String title,
+    required String body,
+    required String type,
+  }) async {
+    await supabaseApi.sendBroadcastNotification(
+      title: title,
+      body: body,
+      type: type,
+    );
+  }
+
+  Future<void> sendNotificationToCustomer({
+    required int customerId,
+    required String title,
+    required String body,
+    required String type,
+    int? orderId,
+  }) async {
+    await supabaseApi.sendNotificationToCustomer(
+      customerId: customerId,
+      title: title,
+      body: body,
+      type: type,
+      orderId: orderId,
+    );
+  }
+
+  Future<void> deleteNotification({required int notificationId}) async {
+    await supabaseApi.deleteNotification(notificationId: notificationId);
+  }
+
+  Future<int> fetchCustomerCount() async {
+    return await supabaseApi.fetchCustomerCount();
+  }
 }

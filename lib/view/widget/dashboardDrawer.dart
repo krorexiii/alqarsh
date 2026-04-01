@@ -4,6 +4,7 @@ import 'package:alkhafajdashboard/view/screen/categories/categoriesScreen.dart';
 import 'package:alkhafajdashboard/view/screen/delivery_zones/deliveryZonesScreen.dart';
 import 'package:alkhafajdashboard/view/screen/home/homeScreen.dart';
 import 'package:alkhafajdashboard/view/screen/items/itemsScreen.dart';
+import 'package:alkhafajdashboard/view/screen/notifications/notificationsScreen.dart';
 import 'package:alkhafajdashboard/view/screen/orders/ordersScreen.dart';
 import 'package:alkhafajdashboard/view/screen/parts/partsScreen.dart';
 import 'package:alkhafajdashboard/view/screen/users/usersScreen.dart';
@@ -139,6 +140,16 @@ class DashboardDrawer extends StatelessWidget {
                       context,
                       'delivery_zones',
                       const DeliveryZonesScreen(),
+                    ),
+                  ),
+                  _DrawerTile(
+                    title: 'الإشعارات',
+                    icon: Icons.notifications_outlined,
+                    isSelected: currentRoute == 'notifications',
+                    onTap: () => _openPage(
+                      context,
+                      'notifications',
+                      const NotificationsScreen(),
                     ),
                   ),
                 ],

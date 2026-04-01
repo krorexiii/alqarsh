@@ -684,4 +684,83 @@ class SupabaseApi {
         .update({"name": name})
         .eq("user_id", userId);
   }
+
+  // ─── Notifications ───────────────────────────────────────────────────
+
+  /// جلب جميع الإشعارات المرسلة من الداشبورد
+  Future<List<Map<String, dynamic>>> fetchNotifications() async {
+    final List<dynamic> response = await supabase
+        .from('customer_notifications')
+        .select('*, customers(name, phone)')
+        .eq('shop_id', shopId)
+        .order('created_at', ascending: false);
+
+    return response.whereType<Map<String, dynamic>>().toList();
+  }
+
+  /// إرسال إشعار جماعي (لكل العملاء أو عبر topic)
+  Future<void> sendBroadcastNotification({
+    required String title,
+    required String body,
+    required String type, // 'promotion' | 'announcement'
+  }) async {
+    // جلب كل العملاء المرتبطين بالمتجر
+    final List<dynamic> customers = await supabase
+        .from('customers')
+        .select('id')
+        .eq('shop_id', shopId);
+
+    if (customers.isEmpty) return;
+
+    final List<Map<String, dynamic>> rows = customers
+        .whereType<Map<String, dynamic>>()
+        .map((c) => {
+              'customer_id': c['id'],
+              'shop_id': shopId,
+              'title': title,
+              'body': body,
+              'type': type,
+              'is_read': false,
+            })
+        .toList();
+
+    // إدراج الإشعارات دفعة واحدة
+    await supabase.from('customer_notifications').insert(rows);
+  }
+
+  /// إرسال إشعار لعميل محدد
+  Future<void> sendNotificationToCustomer({
+    required int customerId,
+    required String title,
+    required String body,
+    required String type,
+    int? orderId,
+  }) async {
+    await supabase.from('customer_notifications').insert({
+      'customer_id': customerId,
+      'shop_id': shopId,
+      'title': title,
+      'body': body,
+      'type': type,
+      'order_id': orderId,
+      'is_read': false,
+    });
+  }
+
+  /// حذف إشعار
+  Future<void> deleteNotification({required int notificationId}) async {
+    await supabase
+        .from('customer_notifications')
+        .delete()
+        .eq('id', notificationId);
+  }
+
+  /// جلب عدد العملاء
+  Future<int> fetchCustomerCount() async {
+    final List<dynamic> response = await supabase
+        .from('customers')
+        .select('id')
+        .eq('shop_id', shopId);
+    return response.length;
+  }
 }

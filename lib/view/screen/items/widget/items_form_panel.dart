@@ -30,14 +30,16 @@ class ItemsFormPanel extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isEditing
-                    ? ConstVar.sColor.withValues(alpha: 0.16)
-                    : ConstVar.pColor.withValues(alpha: 0.05),
+                color:
+                    isEditing
+                        ? ConstVar.sColor.withValues(alpha: 0.16)
+                        : ConstVar.pColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: isEditing
-                      ? ConstVar.sColor.withValues(alpha: 0.7)
-                      : ConstVar.pColor.withValues(alpha: 0.12),
+                  color:
+                      isEditing
+                          ? ConstVar.sColor.withValues(alpha: 0.7)
+                          : ConstVar.pColor.withValues(alpha: 0.12),
                 ),
               ),
               child: Column(
@@ -61,17 +63,19 @@ class ItemsFormPanel extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _HeroPreviewCard(
-              bytes: cubit.pendingImages.isNotEmpty
-                  ? cubit.pendingImages.first.bytes
-                  : null,
-              imageUrl: cubit.itemImages.isNotEmpty
-                  ? cubit.itemImages
-                        .firstWhere(
-                          (item) => item.isPrimary == true,
-                          orElse: () => cubit.itemImages.first,
-                        )
-                        .publicUrl
-                  : null,
+              bytes:
+                  cubit.pendingImages.isNotEmpty
+                      ? cubit.pendingImages.first.bytes
+                      : null,
+              imageUrl:
+                  cubit.itemImages.isNotEmpty
+                      ? cubit.itemImages
+                          .firstWhere(
+                            (item) => item.isPrimary == true,
+                            orElse: () => cubit.itemImages.first,
+                          )
+                          .publicUrl
+                      : null,
               title: cubit.titleController.text,
               priceText: cubit.priceController.text,
               categoryName: cubit.getCategoryName(cubit.selectedCategoryId),
@@ -94,7 +98,7 @@ class ItemsFormPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              initialValue: cubit.selectedCategoryId,
+              value: cubit.selectedCategoryId,
               decoration: InputDecoration(
                 labelText: 'التصنيف',
                 filled: true,
@@ -104,14 +108,15 @@ class ItemsFormPanel extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
               ),
-              items: cubit.categories
-                  .map(
-                    (CategoryModel category) => DropdownMenuItem<String>(
-                      value: category.id,
-                      child: Text(category.name ?? 'بدون اسم'),
-                    ),
-                  )
-                  .toList(),
+              items:
+                  cubit.categories
+                      .map(
+                        (CategoryModel category) => DropdownMenuItem<String>(
+                          value: category.id,
+                          child: Text(category.name ?? 'بدون اسم'),
+                        ),
+                      )
+                      .toList(),
               onChanged: isBusy ? null : cubit.setCategoryId,
             ),
             const SizedBox(height: 8),
@@ -127,9 +132,10 @@ class ItemsFormPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: MyButton(
-                    text: cubit.pendingImages.isEmpty
-                        ? 'اختيار صور للمنتج'
-                        : 'إضافة صور أخرى',
+                    text:
+                        cubit.pendingImages.isEmpty
+                            ? 'اختيار صور للمنتج'
+                            : 'إضافة صور أخرى',
                     icon: Icons.upload_file_outlined,
                     variant: MyButtonVariant.secondary,
                     expand: true,
@@ -206,19 +212,22 @@ class ItemsFormPanel extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: MyButton(
-                    text: isEditing && selectedItem.isDeleted == true
-                        ? 'استعادة المنتج'
-                        : 'أرشفة المنتج',
-                    icon: isEditing && selectedItem.isDeleted == true
-                        ? Icons.restore
-                        : Icons.archive_outlined,
+                    text:
+                        isEditing && selectedItem.isDeleted == true
+                            ? 'استعادة المنتج'
+                            : 'أرشفة المنتج',
+                    icon:
+                        isEditing && selectedItem.isDeleted == true
+                            ? Icons.restore
+                            : Icons.archive_outlined,
                     variant: MyButtonVariant.secondary,
                     expand: true,
-                    onPressed: !isEditing || isBusy
-                        ? null
-                        : selectedItem.isDeleted == true
-                        ? cubit.restoreSelectedItem
-                        : cubit.deleteSelectedItem,
+                    onPressed:
+                        !isEditing || isBusy
+                            ? null
+                            : selectedItem.isDeleted == true
+                            ? cubit.restoreSelectedItem
+                            : cubit.deleteSelectedItem,
                   ),
                 ),
               ],
@@ -229,9 +238,10 @@ class ItemsFormPanel extends StatelessWidget {
               icon: Icons.delete_forever_outlined,
               variant: MyButtonVariant.danger,
               expand: true,
-              onPressed: !isEditing || isBusy
-                  ? null
-                  : () => cubit.deleteSelectedItem(permanent: true),
+              onPressed:
+                  !isEditing || isBusy
+                      ? null
+                      : () => cubit.deleteSelectedItem(permanent: true),
             ),
             const SizedBox(height: 20),
             _ImagesSection(cubit: cubit, isBusy: isBusy),
@@ -469,19 +479,20 @@ class _ImagesSection extends StatelessWidget {
           )
         else
           Column(
-            children: cubit.itemImages
-                .map(
-                  (ItemImageModel image) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _ImageTile(
-                      image: image,
-                      isBusy: isBusy,
-                      onSetPrimary: () => cubit.setPrimaryImage(image),
-                      onDelete: () => cubit.deleteImage(image),
-                    ),
-                  ),
-                )
-                .toList(),
+            children:
+                cubit.itemImages
+                    .map(
+                      (ItemImageModel image) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ImageTile(
+                          image: image,
+                          isBusy: isBusy,
+                          onSetPrimary: () => cubit.setPrimaryImage(image),
+                          onDelete: () => cubit.deleteImage(image),
+                        ),
+                      ),
+                    )
+                    .toList(),
           ),
       ],
     );
@@ -509,9 +520,10 @@ class _ImageTile extends StatelessWidget {
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: image.isPrimary == true
-              ? Colors.green.shade300
-              : Colors.grey.shade300,
+          color:
+              image.isPrimary == true
+                  ? Colors.green.shade300
+                  : Colors.grey.shade300,
         ),
       ),
       child: Row(
@@ -525,16 +537,18 @@ class _ImageTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: image.publicUrl != null && image.publicUrl!.isNotEmpty
-                ? Image.network(
-                    image.publicUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(
-                      Icons.broken_image_outlined,
-                      color: Colors.grey.shade500,
-                    ),
-                  )
-                : Icon(Icons.image_outlined, color: Colors.grey.shade500),
+            child:
+                image.publicUrl != null && image.publicUrl!.isNotEmpty
+                    ? Image.network(
+                      image.publicUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (_, __, ___) => Icon(
+                            Icons.broken_image_outlined,
+                            color: Colors.grey.shade500,
+                          ),
+                    )
+                    : Icon(Icons.image_outlined, color: Colors.grey.shade500),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -594,9 +608,8 @@ class _ImageTile extends StatelessWidget {
                 text: 'رئيسية',
                 icon: Icons.star_outline,
                 variant: MyButtonVariant.secondary,
-                onPressed: isBusy || image.isPrimary == true
-                    ? null
-                    : onSetPrimary,
+                onPressed:
+                    isBusy || image.isPrimary == true ? null : onSetPrimary,
               ),
               const SizedBox(height: 8),
               MyButton(

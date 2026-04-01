@@ -3,7 +3,7 @@ description: "A new Flutter project."
 publish_to: 'none'
 version: 1.0.0+1
 environment:
-  sdk: ^3.8.0
+  sdk: ^3.7.2
 
 dependencies:
   flutter:
@@ -15,11 +15,11 @@ dependencies:
   flutter_bloc: ^9.1.1
   get: ^4.7.3
 
-  font_awesome_flutter: ^11.0.0
-  awesome_snackbar_content: ^0.1.8
-  google_fonts: ^8.0.2
+  font_awesome_flutter: ^10.8.0
+  awesome_snackbar_content: 0.1.4
+  google_fonts: ^6.2.1
   dropdown_search: ^6.0.2
-  file_picker: ^10.3.2
+  file_picker: ^8.1.7
 
 dev_dependencies:
   flutter_test:

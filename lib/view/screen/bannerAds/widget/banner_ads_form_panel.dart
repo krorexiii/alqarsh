@@ -31,14 +31,16 @@ class BannerAdsFormPanel extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isEditing
-                    ? ConstVar.sColor.withValues(alpha: 0.16)
-                    : ConstVar.pColor.withValues(alpha: 0.05),
+                color:
+                    isEditing
+                        ? ConstVar.sColor.withValues(alpha: 0.16)
+                        : ConstVar.pColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: isEditing
-                      ? ConstVar.sColor.withValues(alpha: 0.7)
-                      : ConstVar.pColor.withValues(alpha: 0.12),
+                  color:
+                      isEditing
+                          ? ConstVar.sColor.withValues(alpha: 0.7)
+                          : ConstVar.pColor.withValues(alpha: 0.12),
                 ),
               ),
               child: Column(
@@ -71,9 +73,10 @@ class BannerAdsFormPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: MyButton(
-                    text: cubit.selectedImageBytes == null
-                        ? 'اختيار صورة'
-                        : 'تغيير الصورة',
+                    text:
+                        cubit.selectedImageBytes == null
+                            ? 'اختيار صورة'
+                            : 'تغيير الصورة',
                     icon: Icons.upload_file_outlined,
                     variant: MyButtonVariant.secondary,
                     expand: true,
@@ -135,7 +138,12 @@ class BannerAdsFormPanel extends StatelessWidget {
                         const Spacer(),
                         Switch(
                           value: cubit.isActive,
-                          activeThumbColor: ConstVar.pColor,
+                          thumbColor: WidgetStateProperty.resolveWith(
+                            (states) =>
+                                states.contains(WidgetState.selected)
+                                    ? ConstVar.pColor
+                                    : null,
+                          ),
                           onChanged: isBusy ? null : cubit.updateActiveStatus,
                         ),
                       ],

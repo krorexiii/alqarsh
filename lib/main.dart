@@ -5,7 +5,8 @@ import 'package:alkhafajdashboard/view/screen/auth/resetPasswordScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
-import 'view/screen/auth/loginScreen.dart';
+// import 'view/screen/auth/loginScreen.dart';
+import 'view/screen/orders/ordersScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import 'view/screen/users/cubit/users_cubit.dart';
@@ -66,9 +67,7 @@ class _MyAppState extends State<MyApp> {
           useMaterial3: true,
           scaffoldBackgroundColor: Colors.white,
         ),
-        home: widget.isRecoverySession
-            ? const ResetPasswordScreen()
-            : LoginScreen(),
+        home: const OrdersScreen(),
       ),
     );
   }

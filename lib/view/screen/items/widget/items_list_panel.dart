@@ -66,7 +66,7 @@ class ItemsListPanel extends StatelessWidget {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String?>(
-                        initialValue: cubit.selectedCategoryFilter?.id,
+                        value: cubit.selectedCategoryFilter?.id,
                         decoration: InputDecoration(
                           labelText: 'تصفية حسب التصنيف',
                           filled: true,
@@ -88,21 +88,23 @@ class ItemsListPanel extends StatelessWidget {
                                 ),
                           ),
                         ],
-                        onChanged: isBusy
-                            ? null
-                            : (value) {
-                                if (value == null || value.isEmpty) {
-                                  cubit.clearCategoryFilter();
-                                  return;
-                                }
-                                final CategoryModel? category = cubit.categories
-                                    .cast<CategoryModel?>()
-                                    .firstWhere(
-                                      (item) => item?.id == value,
-                                      orElse: () => null,
-                                    );
-                                cubit.selectCategoryFilter(category);
-                              },
+                        onChanged:
+                            isBusy
+                                ? null
+                                : (value) {
+                                  if (value == null || value.isEmpty) {
+                                    cubit.clearCategoryFilter();
+                                    return;
+                                  }
+                                  final CategoryModel? category = cubit
+                                      .categories
+                                      .cast<CategoryModel?>()
+                                      .firstWhere(
+                                        (item) => item?.id == value,
+                                        orElse: () => null,
+                                      );
+                                  cubit.selectCategoryFilter(category);
+                                },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -123,139 +125,150 @@ class ItemsListPanel extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: cubit.items.isEmpty
-                ? Container(
-                    decoration: BoxDecoration(
-                      color: ConstVar.pColor.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: ConstVar.pColor.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: const Center(
-                      child: MyText(
-                        'لا توجد منتجات مطابقة حالياً.',
-                        fontSize: 20,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: cubit.items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final ItemModel item = cubit.items[index];
-                      final bool isSelected = cubit.selectedItem?.id == item.id;
-
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? ConstVar.sColor.withValues(alpha: 0.18)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? ConstVar.sColor
-                                : Colors.grey.shade300,
-                            width: isSelected ? 2 : 1,
-                          ),
+            child:
+                cubit.items.isEmpty
+                    ? Container(
+                      decoration: BoxDecoration(
+                        color: ConstVar.pColor.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: ConstVar.pColor.withValues(alpha: 0.2),
                         ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: isBusy ? null : () => cubit.selectItem(item),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    color: item.isDeleted == true
-                                        ? Colors.red.shade50
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: item.isDeleted == true
-                                          ? Colors.red.shade200
-                                          : Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    item.isDeleted == true
-                                        ? Icons.delete_outline
-                                        : item.isActive == true
-                                        ? Icons.inventory_2_outlined
-                                        : Icons.inventory_outlined,
-                                    color: item.isDeleted == true
-                                        ? Colors.red.shade400
-                                        : item.isActive == true
-                                        ? Colors.green.shade600
-                                        : Colors.grey.shade500,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: MyText(
-                                              item.title ?? 'منتج بدون اسم',
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          _StatusChip(
-                                            label: item.isDeleted == true
-                                                ? 'محذوف'
-                                                : item.isActive == true
-                                                ? 'نشط'
-                                                : 'مخفي',
-                                            color: item.isDeleted == true
-                                                ? Colors.red
-                                                : item.isActive == true
-                                                ? Colors.green
-                                                : Colors.orange,
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      MyText(
-                                        cubit.getCategoryName(item.categoryId),
-                                        fontSize: 15,
-                                        color: Colors.black54,
-                                      ),
-                                      const SizedBox(height: 6),
-                                      MyText(
-                                        'السعر: ${item.price?.toStringAsFixed(2) ?? '0.00'}',
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      if ((item.description ?? '')
-                                          .isNotEmpty) ...[
-                                        const SizedBox(height: 6),
-                                        MyText(
-                                          item.description!,
-                                          fontSize: 14,
-                                          color: Colors.black45,
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ],
+                      ),
+                      child: const Center(
+                        child: MyText(
+                          'لا توجد منتجات مطابقة حالياً.',
+                          fontSize: 20,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    )
+                    : ListView.separated(
+                      itemCount: cubit.items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final ItemModel item = cubit.items[index];
+                        final bool isSelected =
+                            cubit.selectedItem?.id == item.id;
+
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color:
+                                isSelected
+                                    ? ConstVar.sColor.withValues(alpha: 0.18)
+                                    : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color:
+                                  isSelected
+                                      ? ConstVar.sColor
+                                      : Colors.grey.shade300,
+                              width: isSelected ? 2 : 1,
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: isBusy ? null : () => cubit.selectItem(item),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          item.isDeleted == true
+                                              ? Colors.red.shade50
+                                              : Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color:
+                                            item.isDeleted == true
+                                                ? Colors.red.shade200
+                                                : Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      item.isDeleted == true
+                                          ? Icons.delete_outline
+                                          : item.isActive == true
+                                          ? Icons.inventory_2_outlined
+                                          : Icons.inventory_outlined,
+                                      color:
+                                          item.isDeleted == true
+                                              ? Colors.red.shade400
+                                              : item.isActive == true
+                                              ? Colors.green.shade600
+                                              : Colors.grey.shade500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: MyText(
+                                                item.title ?? 'منتج بدون اسم',
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            _StatusChip(
+                                              label:
+                                                  item.isDeleted == true
+                                                      ? 'محذوف'
+                                                      : item.isActive == true
+                                                      ? 'نشط'
+                                                      : 'مخفي',
+                                              color:
+                                                  item.isDeleted == true
+                                                      ? Colors.red
+                                                      : item.isActive == true
+                                                      ? Colors.green
+                                                      : Colors.orange,
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        MyText(
+                                          cubit.getCategoryName(
+                                            item.categoryId,
+                                          ),
+                                          fontSize: 15,
+                                          color: Colors.black54,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        MyText(
+                                          'السعر: ${item.price?.toStringAsFixed(2) ?? '0.00'}',
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        if ((item.description ?? '')
+                                            .isNotEmpty) ...[
+                                          const SizedBox(height: 6),
+                                          MyText(
+                                            item.description!,
+                                            fontSize: 14,
+                                            color: Colors.black45,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
           ),
         ],
       ),
