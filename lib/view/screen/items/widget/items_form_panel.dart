@@ -96,6 +96,51 @@ class ItemsFormPanel extends StatelessWidget {
                 decimal: true,
               ),
             ),
+            MyTextFeild(
+              labelText: 'نسبة التخفيض %',
+              controller: cubit.discountPercentController,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 8),
+            Builder(
+              builder: (context) {
+                final double price =
+                    double.tryParse(cubit.priceController.text.trim()) ?? 0;
+                final int percent =
+                    int.tryParse(cubit.discountPercentController.text.trim()) ??
+                    0;
+                final double finalPrice =
+                    percent > 0 ? price * (1 - (percent / 100)) : price;
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MyText(
+                        'المعادلة: السعر بعد التخفيض = السعر الاصلي × (1 - نسبة التخفيض / 100)',
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                      const SizedBox(height: 6),
+                      MyText(
+                        'السعر النهائي: ${finalPrice.toStringAsFixed(2)}',
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: cubit.selectedCategoryId,

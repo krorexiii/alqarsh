@@ -5,6 +5,7 @@ class ItemModel {
   String? title;
   String? description;
   double? price;
+  int? discountPercent;
   bool? isActive;
   bool? isDeleted;
   DateTime? createdAt;
@@ -17,6 +18,7 @@ class ItemModel {
     this.title,
     this.description,
     this.price,
+    this.discountPercent,
     this.isActive,
     this.isDeleted,
     this.createdAt,
@@ -30,17 +32,24 @@ class ItemModel {
       categoryId: json['category_id'] as String?,
       title: json['title'] as String?,
       description: json['description'] as String?,
-      price: json['price'] != null
-          ? double.tryParse(json['price'].toString())
-          : null,
+      price:
+          json['price'] != null
+              ? double.tryParse(json['price'].toString())
+              : null,
+      discountPercent:
+          json['discount_percent'] != null
+              ? int.tryParse(json['discount_percent'].toString())
+              : null,
       isActive: json['is_active'] as bool?,
       isDeleted: json['is_deleted'] as bool?,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'].toString())
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'].toString())
-          : null,
+      createdAt:
+          json['created_at'] != null
+              ? DateTime.tryParse(json['created_at'].toString())
+              : null,
+      updatedAt:
+          json['updated_at'] != null
+              ? DateTime.tryParse(json['updated_at'].toString())
+              : null,
     );
   }
 
@@ -51,6 +60,7 @@ class ItemModel {
       'title': title,
       'description': description,
       'price': price,
+      'discount_percent': discountPercent,
       'is_active': isActive,
       'is_deleted': isDeleted,
     };
@@ -63,6 +73,7 @@ class ItemModel {
     String? title,
     String? description,
     double? price,
+    int? discountPercent,
     bool? isActive,
     bool? isDeleted,
     DateTime? createdAt,
@@ -75,11 +86,25 @@ class ItemModel {
       title: title ?? this.title,
       description: description ?? this.description,
       price: price ?? this.price,
+      discountPercent: discountPercent ?? this.discountPercent,
       isActive: isActive ?? this.isActive,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+}
+
+extension ItemModelPricing on ItemModel {
+  bool get hasDiscount => (discountPercent ?? 0) > 0;
+
+  double get finalPrice {
+    final original = price ?? 0;
+    final percent = discountPercent ?? 0;
+    if (percent <= 0) {
+      return original;
+    }
+    return original * (1 - (percent / 100));
   }
 }
 
@@ -90,6 +115,7 @@ class ItemModel {
 //   title text not null,
 //   description text null,
 //   price numeric(12, 2) not null default 0,
+//   discount_percent smallint null default 0,
 //   is_active boolean not null default true,
 //   is_deleted boolean not null default false,
 //   created_at timestamp with time zone not null default now(),

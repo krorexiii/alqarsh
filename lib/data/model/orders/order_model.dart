@@ -48,6 +48,29 @@ class OrderModel {
   bool get canBePrepared =>
       status == 'confirmed' || status == 'preparing' || status == 'shipped';
 
+  int get discountedItemsCount =>
+      items.where((item) => item.discountPercentSnapshot > 0).length;
+
+  int get totalItemsCount => items.length;
+
+  int get totalQuantity =>
+      items.fold<int>(0, (sum, item) => sum + item.quantity);
+
+  Duration get waitingDuration {
+    if (createdAt == null) {
+      return Duration.zero;
+    }
+    final Duration diff = DateTime.now().difference(createdAt!);
+    return diff.isNegative ? Duration.zero : diff;
+  }
+
+  bool get isLate {
+    if (status == 'delivered' || status == 'cancelled') {
+      return false;
+    }
+    return waitingDuration.inMinutes >= 30;
+  }
+
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     final List<dynamic> itemsJson = json['order_items'] as List<dynamic>? ?? [];
     final List<dynamic> historyJson =
@@ -56,10 +79,11 @@ class OrderModel {
         json['customers'] as Map<String, dynamic>?;
     final Map<String, dynamic>? assignedLocationJson =
         json['assigned_location'] as Map<String, dynamic>?;
-    final List<OrderStatusHistoryModel> parsedHistory = historyJson
-        .whereType<Map<String, dynamic>>()
-        .map(OrderStatusHistoryModel.fromJson)
-        .toList();
+    final List<OrderStatusHistoryModel> parsedHistory =
+        historyJson
+            .whereType<Map<String, dynamic>>()
+            .map(OrderStatusHistoryModel.fromJson)
+            .toList();
 
     return OrderModel(
       id: json['id'] as int? ?? 0,
@@ -70,12 +94,14 @@ class OrderModel {
       deliveryFee: (json['delivery_fee'] as num?)?.toDouble() ?? 0,
       total: (json['total'] as num?)?.toDouble() ?? 0,
       note: json['note']?.toString(),
-      createdAt: json['created_at'] == null
-          ? null
-          : DateTime.tryParse(json['created_at'].toString()),
-      updatedAt: json['updated_at'] == null
-          ? null
-          : DateTime.tryParse(json['updated_at'].toString()),
+      createdAt:
+          json['created_at'] == null
+              ? null
+              : DateTime.tryParse(json['created_at'].toString()),
+      updatedAt:
+          json['updated_at'] == null
+              ? null
+              : DateTime.tryParse(json['updated_at'].toString()),
       customerLat:
           (customerJson?['l_x'] as num?)?.toDouble() ??
           (customerJson?['L_X'] as num?)?.toDouble() ??
@@ -92,18 +118,19 @@ class OrderModel {
                   json['customer_location_name'] ??
                   'عميل')
               .toString(),
-      customerPhone: (customerJson?['phone'] ?? json['customer_phone'] ?? '')
-          .toString(),
+      customerPhone:
+          (customerJson?['phone'] ?? json['customer_phone'] ?? '').toString(),
       assignedLocationId:
           json['assigned_location_id'] as int? ??
           assignedLocationJson?['id'] as int?,
       assignedLocationName:
           assignedLocationJson?['name']?.toString() ??
           json['assigned_location_name']?.toString(),
-      items: itemsJson
-          .whereType<Map<String, dynamic>>()
-          .map(OrderItemModel.fromJson)
-          .toList(),
+      items:
+          itemsJson
+              .whereType<Map<String, dynamic>>()
+              .map(OrderItemModel.fromJson)
+              .toList(),
       history: parsedHistory,
     );
   }

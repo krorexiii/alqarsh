@@ -1,12 +1,11 @@
 import 'dart:async';
 
 import 'package:alkhafajdashboard/view/screen/auth/cubit/auth_cubit.dart';
+import 'package:alkhafajdashboard/view/screen/auth/loginScreen.dart';
 import 'package:alkhafajdashboard/view/screen/auth/resetPasswordScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
-// import 'view/screen/auth/loginScreen.dart';
-import 'view/screen/orders/ordersScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import 'view/screen/users/cubit/users_cubit.dart';
@@ -55,6 +54,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget homeScreen =
+        widget.isRecoverySession ? const ResetPasswordScreen() : LoginScreen();
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (context) => AuthCubit()),
@@ -67,7 +69,7 @@ class _MyAppState extends State<MyApp> {
           useMaterial3: true,
           scaffoldBackgroundColor: Colors.white,
         ),
-        home: const OrdersScreen(),
+        home: homeScreen,
       ),
     );
   }

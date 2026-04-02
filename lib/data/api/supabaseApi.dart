@@ -49,11 +49,12 @@ class SupabaseApi {
       return null;
     }
 
-    final Map<String, dynamic>? data = await supabase
-        .from('shop_users')
-        .select()
-        .eq('user_id', userId)
-        .maybeSingle();
+    final Map<String, dynamic>? data =
+        await supabase
+            .from('shop_users')
+            .select()
+            .eq('user_id', userId)
+            .maybeSingle();
 
     if (data == null) {
       return null;
@@ -299,11 +300,12 @@ class SupabaseApi {
 
   Future<void> deleteItemPermanently({required int itemId}) async {
     final List<dynamic> images = await fetchItemImages(itemId: itemId);
-    final List<String> paths = images
-        .map((dynamic image) => image['image_path'])
-        .whereType<String>()
-        .where((path) => path.isNotEmpty)
-        .toList();
+    final List<String> paths =
+        images
+            .map((dynamic image) => image['image_path'])
+            .whereType<String>()
+            .where((path) => path.isNotEmpty)
+            .toList();
 
     if (paths.isNotEmpty) {
       await supabase.storage.from('items').remove(paths);
@@ -501,23 +503,75 @@ class SupabaseApi {
   Future<List<OrderModel>> _composeOrdersWithNewLocations(
     List<dynamic> orderRows,
   ) async {
-    final List<Map<String, dynamic>> orders = orderRows
-        .whereType<Map<String, dynamic>>()
-        .toList();
+    final List<Map<String, dynamic>> orders =
+        orderRows.whereType<Map<String, dynamic>>().toList();
 
     if (orders.isEmpty) {
       return <OrderModel>[];
     }
 
-    final Set<int> customerIds = orders
-        .map((row) => row['customer_id'])
-        .whereType<int>()
-        .toSet();
+    final Set<int> customerIds =
+        orders.map((row) => row['customer_id']).whereType<int>().toSet();
 
-    final Set<int> assignedLocationIds = orders
-        .map((row) => row['assigned_location_id'])
-        .whereType<int>()
-        .toSet();
+    final Set<int> orderIds =
+        orders.map((row) => row['id']).whereType<int>().toSet();
+
+    final Set<int> assignedLocationIds =
+        orders
+            .map((row) => row['assigned_location_id'])
+            .whereType<int>()
+            .toSet();
+
+    final bool hasOrderItemsInRows = orders.any(
+      (row) => row['order_items'] is List,
+    );
+    final bool hasHistoryInRows = orders.any(
+      (row) => row['order_status_history'] is List,
+    );
+
+    final Map<int, List<Map<String, dynamic>>> orderItemsByOrderId =
+        <int, List<Map<String, dynamic>>>{};
+    final Map<int, List<Map<String, dynamic>>> orderHistoryByOrderId =
+        <int, List<Map<String, dynamic>>>{};
+
+    if (orderIds.isNotEmpty && !hasOrderItemsInRows) {
+      final List<dynamic> orderItemsRows = await supabase
+          .from('order_items')
+          .select('*')
+          .inFilter('order_id', orderIds.toList());
+
+      for (final row in orderItemsRows.whereType<Map<String, dynamic>>()) {
+        final int? orderId = row['order_id'] as int?;
+        if (orderId == null) {
+          continue;
+        }
+        orderItemsByOrderId.putIfAbsent(
+          orderId,
+          () => <Map<String, dynamic>>[],
+        );
+        orderItemsByOrderId[orderId]!.add(row);
+      }
+    }
+
+    if (orderIds.isNotEmpty && !hasHistoryInRows) {
+      final List<dynamic> historyRows = await supabase
+          .from('order_status_history')
+          .select('*')
+          .inFilter('order_id', orderIds.toList())
+          .order('created_at', ascending: true);
+
+      for (final row in historyRows.whereType<Map<String, dynamic>>()) {
+        final int? orderId = row['order_id'] as int?;
+        if (orderId == null) {
+          continue;
+        }
+        orderHistoryByOrderId.putIfAbsent(
+          orderId,
+          () => <Map<String, dynamic>>[],
+        );
+        orderHistoryByOrderId[orderId]!.add(row);
+      }
+    }
 
     final Map<int, Map<String, dynamic>> customerLocationByCustomerId =
         <int, Map<String, dynamic>>{};
@@ -558,35 +612,52 @@ class SupabaseApi {
       }
     }
 
-    final List<Map<String, dynamic>> normalizedRows = orders.map((row) {
-      final int? customerId = row['customer_id'] as int?;
-      final int? assignedLocationId = row['assigned_location_id'] as int?;
+    final List<Map<String, dynamic>> normalizedRows =
+        orders.map((row) {
+          final int? customerId = row['customer_id'] as int?;
+          final int? assignedLocationId = row['assigned_location_id'] as int?;
+          final int? orderId = row['id'] as int?;
 
-      final Map<String, dynamic>? customerLoc = customerId == null
-          ? null
-          : customerLocationByCustomerId[customerId];
-      final Map<String, dynamic>? storeLoc = assignedLocationId == null
-          ? null
-          : storeLocationById[assignedLocationId];
+          final Map<String, dynamic>? customerLoc =
+              customerId == null
+                  ? null
+                  : customerLocationByCustomerId[customerId];
+          final Map<String, dynamic>? storeLoc =
+              assignedLocationId == null
+                  ? null
+                  : storeLocationById[assignedLocationId];
 
-      return <String, dynamic>{
-        ...row,
-        if (customerLoc != null)
-          'customer_lat': (customerLoc['L_X'] as num?)?.toDouble(),
-        if (customerLoc != null)
-          'customer_lng': (customerLoc['L_y'] as num?)?.toDouble(),
-        if (customerLoc != null)
-          'customer_location_name':
-              (customerLoc['full_address'] ?? customerLoc['location_name'])
-                  ?.toString(),
-        if (storeLoc != null)
-          'assigned_location': {
-            'id': storeLoc['id'],
-            'name': (storeLoc['name'] ?? '').toString(),
-            'location_name': (storeLoc['location_name'] ?? '').toString(),
-          },
-      };
-    }).toList();
+          final List<Map<String, dynamic>> fallbackItems =
+              orderId == null
+                  ? <Map<String, dynamic>>[]
+                  : (orderItemsByOrderId[orderId] ?? <Map<String, dynamic>>[]);
+          final List<Map<String, dynamic>> fallbackHistory =
+              orderId == null
+                  ? <Map<String, dynamic>>[]
+                  : (orderHistoryByOrderId[orderId] ??
+                      <Map<String, dynamic>>[]);
+
+          return <String, dynamic>{
+            ...row,
+            if (row['order_items'] is! List) 'order_items': fallbackItems,
+            if (row['order_status_history'] is! List)
+              'order_status_history': fallbackHistory,
+            if (customerLoc != null)
+              'customer_lat': (customerLoc['L_X'] as num?)?.toDouble(),
+            if (customerLoc != null)
+              'customer_lng': (customerLoc['L_y'] as num?)?.toDouble(),
+            if (customerLoc != null)
+              'customer_location_name':
+                  (customerLoc['full_address'] ?? customerLoc['location_name'])
+                      ?.toString(),
+            if (storeLoc != null)
+              'assigned_location': {
+                'id': storeLoc['id'],
+                'name': (storeLoc['name'] ?? '').toString(),
+                'location_name': (storeLoc['location_name'] ?? '').toString(),
+              },
+          };
+        }).toList();
 
     return normalizedRows.map(OrderModel.fromJson).toList();
   }
@@ -712,17 +783,20 @@ class SupabaseApi {
 
     if (customers.isEmpty) return;
 
-    final List<Map<String, dynamic>> rows = customers
-        .whereType<Map<String, dynamic>>()
-        .map((c) => {
-              'customer_id': c['id'],
-              'shop_id': shopId,
-              'title': title,
-              'body': body,
-              'type': type,
-              'is_read': false,
-            })
-        .toList();
+    final List<Map<String, dynamic>> rows =
+        customers
+            .whereType<Map<String, dynamic>>()
+            .map(
+              (c) => {
+                'customer_id': c['id'],
+                'shop_id': shopId,
+                'title': title,
+                'body': body,
+                'type': type,
+                'is_read': false,
+              },
+            )
+            .toList();
 
     // إدراج الإشعارات دفعة واحدة
     await supabase.from('customer_notifications').insert(rows);

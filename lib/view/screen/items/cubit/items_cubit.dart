@@ -23,7 +23,11 @@ class PendingItemImage {
 }
 
 class ItemsCubit extends Cubit<ItemsState> {
-  ItemsCubit() : super(ItemsInitial());
+  ItemsCubit() : super(ItemsInitial()) {
+    titleController.addListener(_emitFormDraftChanged);
+    priceController.addListener(_emitFormDraftChanged);
+    discountPercentController.addListener(_emitFormDraftChanged);
+  }
 
   final Repository _repository = Repository();
 
@@ -42,9 +46,26 @@ class ItemsCubit extends Cubit<ItemsState> {
   final TextEditingController priceController = TextEditingController(
     text: '0',
   );
+  final TextEditingController discountPercentController = TextEditingController(
+    text: '0',
+  );
 
   bool isActive = true;
   bool includeDeleted = false;
+  final Set<int> selectedItemIds = <int>{};
+
+  int get selectedItemsCount => selectedItemIds.length;
+  bool get hasBulkSelection => selectedItemIds.isNotEmpty;
+
+  void _emitFormDraftChanged() {
+    if (isClosed) {
+      return;
+    }
+    if (state is ItemsLoading || state is ItemsSaving) {
+      return;
+    }
+    emit(ItemsLoaded());
+  }
 
   Future<void> initialize() async {
     emit(ItemsLoading());
@@ -96,15 +117,17 @@ class ItemsCubit extends Cubit<ItemsState> {
 
   Future<void> _fetchCategoriesInternal() async {
     final List<dynamic> response = await _repository.fetchCategories();
-    categories = response.map((item) {
-      final category = CategoryModel.fromJson(item as Map<String, dynamic>);
-      final String? path = category.icon;
-      return category.copyWith(
-        publicUrl: path != null && path.isNotEmpty
-            ? _repository.getCategoryImagePublicUrl(path)
-            : null,
-      );
-    }).toList();
+    categories =
+        response.map((item) {
+          final category = CategoryModel.fromJson(item as Map<String, dynamic>);
+          final String? path = category.icon;
+          return category.copyWith(
+            publicUrl:
+                path != null && path.isNotEmpty
+                    ? _repository.getCategoryImagePublicUrl(path)
+                    : null,
+          );
+        }).toList();
 
     if (selectedCategoryId != null) {
       final int index = categories.indexWhere(
@@ -121,23 +144,28 @@ class ItemsCubit extends Cubit<ItemsState> {
       final int filterIndex = categories.indexWhere(
         (category) => category.id == selectedCategoryFilter!.id,
       );
-      selectedCategoryFilter = filterIndex >= 0
-          ? categories[filterIndex]
-          : null;
+      selectedCategoryFilter =
+          filterIndex >= 0 ? categories[filterIndex] : null;
     }
   }
 
   Future<void> _fetchItemsInternal() async {
-    final List<dynamic> response = selectedCategoryFilter != null
-        ? await _repository.fetchItemsByCategory(
-            categoryId: selectedCategoryFilter!.id!,
-            includeDeleted: includeDeleted,
-          )
-        : await _repository.fetchItems(includeDeleted: includeDeleted);
+    final List<dynamic> response =
+        selectedCategoryFilter != null
+            ? await _repository.fetchItemsByCategory(
+              categoryId: selectedCategoryFilter!.id!,
+              includeDeleted: includeDeleted,
+            )
+            : await _repository.fetchItems(includeDeleted: includeDeleted);
 
-    items = response.map((item) {
-      return ItemModel.fromJson(item as Map<String, dynamic>);
-    }).toList();
+    items =
+        response.map((item) {
+          return ItemModel.fromJson(item as Map<String, dynamic>);
+        }).toList();
+
+    final Set<int> visibleIds =
+        items.map((item) => item.id).whereType<int>().toSet();
+    selectedItemIds.removeWhere((id) => !visibleIds.contains(id));
 
     if (selectedItem != null) {
       final int index = items.indexWhere((item) => item.id == selectedItem!.id);
@@ -152,6 +180,91 @@ class ItemsCubit extends Cubit<ItemsState> {
     await _loadSelectedItemImages();
     if (emitState) {
       emit(ItemsLoaded());
+    }
+  }
+
+  void toggleItemSelection(ItemModel item) {
+    final int? id = item.id;
+    if (id == null) {
+      return;
+    }
+
+    if (selectedItemIds.contains(id)) {
+      selectedItemIds.remove(id);
+    } else {
+      selectedItemIds.add(id);
+    }
+
+    emit(ItemsLoaded());
+  }
+
+  void selectAllVisibleItems() {
+    selectedItemIds
+      ..clear()
+      ..addAll(
+        items
+            .where((item) => item.id != null && item.isDeleted != true)
+            .map((item) => item.id!)
+            .toSet(),
+      );
+    emit(ItemsLoaded());
+  }
+
+  void clearBulkSelection() {
+    if (selectedItemIds.isEmpty) {
+      return;
+    }
+    selectedItemIds.clear();
+    emit(ItemsLoaded());
+  }
+
+  bool isItemSelected(ItemModel item) {
+    final int? id = item.id;
+    if (id == null) {
+      return false;
+    }
+    return selectedItemIds.contains(id);
+  }
+
+  Future<void> applyBulkDiscountPercent(int discountPercent) async {
+    if (selectedItemIds.isEmpty) {
+      emit(ItemsError('اختر منتجات أولاً لتطبيق الخصم الجماعي'));
+      return;
+    }
+
+    if (discountPercent < 0 || discountPercent > 95) {
+      emit(ItemsError('نسبة التخفيض يجب أن تكون بين 0 و 95'));
+      return;
+    }
+
+    emit(ItemsSaving());
+    try {
+      final List<ItemModel> targets =
+          items
+              .where(
+                (item) =>
+                    item.id != null &&
+                    selectedItemIds.contains(item.id) &&
+                    item.isDeleted != true,
+              )
+              .toList();
+
+      for (final item in targets) {
+        await _repository.updateItem(
+          item: item.copyWith(discountPercent: discountPercent),
+        );
+      }
+
+      await fetchItems();
+      emit(
+        ItemsSuccess(
+          discountPercent == 0
+              ? 'تم إلغاء التخفيض عن ${targets.length} منتج'
+              : 'تم تطبيق خصم $discountPercent% على ${targets.length} منتج',
+        ),
+      );
+    } catch (e) {
+      emit(ItemsError('فشل في تطبيق الخصم الجماعي'));
     }
   }
 
@@ -201,6 +314,7 @@ class ItemsCubit extends Cubit<ItemsState> {
     titleController.clear();
     descriptionController.clear();
     priceController.text = '0';
+    discountPercentController.text = '0';
     selectedCategoryId = categories.isNotEmpty ? categories.first.id : null;
     pendingImages = [];
     isActive = true;
@@ -221,9 +335,8 @@ class ItemsCubit extends Cubit<ItemsState> {
         return;
       }
 
-      final pickedFiles = result.files
-          .where((file) => file.bytes != null)
-          .toList();
+      final pickedFiles =
+          result.files.where((file) => file.bytes != null).toList();
 
       if (pickedFiles.isEmpty) {
         emit(ItemsError('تعذر قراءة ملفات الصور المحددة'));
@@ -285,6 +398,11 @@ class ItemsCubit extends Cubit<ItemsState> {
     final String title = titleController.text.trim();
     final String description = descriptionController.text.trim();
     final double? price = double.tryParse(priceController.text.trim());
+    final int? discountPercent = int.tryParse(
+      discountPercentController.text.trim().isEmpty
+          ? '0'
+          : discountPercentController.text.trim(),
+    );
 
     if (title.isEmpty) {
       emit(ItemsError('اسم المنتج مطلوب'));
@@ -301,6 +419,13 @@ class ItemsCubit extends Cubit<ItemsState> {
       return;
     }
 
+    if (discountPercent == null ||
+        discountPercent < 0 ||
+        discountPercent > 95) {
+      emit(ItemsError('نسبة التخفيض يجب أن تكون بين 0 و 95'));
+      return;
+    }
+
     emit(ItemsSaving());
 
     try {
@@ -311,6 +436,7 @@ class ItemsCubit extends Cubit<ItemsState> {
           title: title,
           description: description.isEmpty ? null : description,
           price: price,
+          discountPercent: discountPercent,
           isActive: isActive,
           isDeleted: false,
         );
@@ -336,6 +462,7 @@ class ItemsCubit extends Cubit<ItemsState> {
         title: title,
         description: description.isEmpty ? null : description,
         price: price,
+        discountPercent: discountPercent,
         isActive: isActive,
       );
 
@@ -354,12 +481,13 @@ class ItemsCubit extends Cubit<ItemsState> {
   }
 
   Future<void> _uploadPendingImagesForItem(int itemId) async {
-    int sortOrder = itemImages.isEmpty
-        ? 1
-        : (itemImages
-                  .map((image) => image.sortOrder ?? 0)
-                  .fold<int>(0, (a, b) => a > b ? a : b) +
-              1);
+    int sortOrder =
+        itemImages.isEmpty
+            ? 1
+            : (itemImages
+                    .map((image) => image.sortOrder ?? 0)
+                    .fold<int>(0, (a, b) => a > b ? a : b) +
+                1);
 
     final bool hasExistingPrimary = itemImages.any(
       (image) => image.isPrimary == true,
@@ -377,9 +505,10 @@ class ItemsCubit extends Cubit<ItemsState> {
         itemId: itemId,
         imagePath: imagePath,
         sortOrder: sortOrder,
-        isPrimary: hasExistingPrimary
-            ? pendingImage.isPrimary
-            : (index == 0 ? true : pendingImage.isPrimary),
+        isPrimary:
+            hasExistingPrimary
+                ? pendingImage.isPrimary
+                : (index == 0 ? true : pendingImage.isPrimary),
       );
 
       await _repository.addItemImage(itemImage: itemImage);
@@ -462,21 +591,25 @@ class ItemsCubit extends Cubit<ItemsState> {
       itemId: selectedItem!.id!,
     );
 
-    itemImages = response.map((item) {
-      final image = ItemImageModel.fromJson(item as Map<String, dynamic>);
-      final String? path = image.imagePath;
-      return image.copyWith(
-        publicUrl: path != null && path.isNotEmpty
-            ? _repository.getItemImagePublicUrl(path)
-            : null,
-      );
-    }).toList();
+    itemImages =
+        response.map((item) {
+          final image = ItemImageModel.fromJson(item as Map<String, dynamic>);
+          final String? path = image.imagePath;
+          return image.copyWith(
+            publicUrl:
+                path != null && path.isNotEmpty
+                    ? _repository.getItemImagePublicUrl(path)
+                    : null,
+          );
+        }).toList();
   }
 
   void _syncControllers() {
     titleController.text = selectedItem?.title ?? '';
     descriptionController.text = selectedItem?.description ?? '';
     priceController.text = (selectedItem?.price ?? 0).toStringAsFixed(2);
+    discountPercentController.text =
+        (selectedItem?.discountPercent ?? 0).toString();
     selectedCategoryId = selectedItem?.categoryId ?? selectedCategoryId;
     isActive = selectedItem?.isActive ?? true;
   }
@@ -490,9 +623,13 @@ class ItemsCubit extends Cubit<ItemsState> {
 
   @override
   Future<void> close() {
+    titleController.removeListener(_emitFormDraftChanged);
+    priceController.removeListener(_emitFormDraftChanged);
+    discountPercentController.removeListener(_emitFormDraftChanged);
     titleController.dispose();
     descriptionController.dispose();
     priceController.dispose();
+    discountPercentController.dispose();
     return super.close();
   }
 }

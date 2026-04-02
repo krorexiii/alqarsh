@@ -13,6 +13,44 @@ class ItemsListPanel extends StatelessWidget {
   final ItemsCubit cubit;
   final bool isBusy;
 
+  Future<void> _showBulkDiscountDialog(BuildContext context) async {
+    final TextEditingController controller = TextEditingController(text: '10');
+    final int? value = await showDialog<int>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('تطبيق خصم جماعي'),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'نسبة التخفيض %',
+                hintText: 'مثال: 15',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('إلغاء'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final int? percent = int.tryParse(controller.text.trim());
+                  Navigator.of(context).pop(percent);
+                },
+                child: const Text('تطبيق'),
+              ),
+            ],
+          ),
+    );
+
+    if (value == null) {
+      return;
+    }
+
+    await cubit.applyBulkDiscountPercent(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MyCard(
@@ -120,6 +158,64 @@ class ItemsListPanel extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MyText(
+                        'التحديد الجماعي: ${cubit.selectedItemsCount} منتج',
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          MyButton(
+                            text: 'تحديد الكل',
+                            icon: Icons.select_all,
+                            variant: MyButtonVariant.ghost,
+                            onPressed:
+                                isBusy ? null : cubit.selectAllVisibleItems,
+                          ),
+                          MyButton(
+                            text: 'إلغاء التحديد',
+                            icon: Icons.clear_all,
+                            variant: MyButtonVariant.ghost,
+                            onPressed: isBusy ? null : cubit.clearBulkSelection,
+                          ),
+                          MyButton(
+                            text: 'تطبيق خصم',
+                            icon: Icons.percent,
+                            variant: MyButtonVariant.secondary,
+                            onPressed:
+                                isBusy || !cubit.hasBulkSelection
+                                    ? null
+                                    : () => _showBulkDiscountDialog(context),
+                          ),
+                          MyButton(
+                            text: 'إلغاء الخصم',
+                            icon: Icons.money_off,
+                            variant: MyButtonVariant.secondary,
+                            onPressed:
+                                isBusy || !cubit.hasBulkSelection
+                                    ? null
+                                    : () => cubit.applyBulkDiscountPercent(0),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -220,6 +316,17 @@ class ItemsListPanel extends StatelessWidget {
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
+                                            Checkbox(
+                                              value: cubit.isItemSelected(item),
+                                              onChanged:
+                                                  isBusy ||
+                                                          item.isDeleted == true
+                                                      ? null
+                                                      : (_) => cubit
+                                                          .toggleItemSelection(
+                                                            item,
+                                                          ),
+                                            ),
                                             _StatusChip(
                                               label:
                                                   item.isDeleted == true
@@ -250,6 +357,15 @@ class ItemsListPanel extends StatelessWidget {
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
                                         ),
+                                        if (item.hasDiscount) ...[
+                                          const SizedBox(height: 4),
+                                          MyText(
+                                            'خصم ${item.discountPercent ?? 0}% -> ${item.finalPrice.toStringAsFixed(2)}',
+                                            fontSize: 14,
+                                            color: Colors.red.shade700,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ],
                                         if ((item.description ?? '')
                                             .isNotEmpty) ...[
                                           const SizedBox(height: 6),
