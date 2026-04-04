@@ -4,7 +4,7 @@ import 'package:alkhafajdashboard/view/widget/myButton.dart';
 import 'package:alkhafajdashboard/view/widget/myCard.dart';
 import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:alkhafajdashboard/view/widget/myTextFeild.dart';
-import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'package:alkhafajdashboard/view/widget/mySnackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
@@ -30,47 +30,26 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
-            final snackBar = SnackBar(
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              behavior: SnackBarBehavior.floating,
-              content: AwesomeSnackbarContent(
-                title: 'خطأ',
-                message: state.message,
-                contentType: ContentType.failure,
-              ),
+            showMySnackbar(
+              context,
+              title: 'خطأ',
+              message: state.message,
+              type: SnackbarType.error,
             );
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(snackBar);
           } else if (state is AuthOtpVerified) {
-            final snackBar = SnackBar(
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              behavior: SnackBarBehavior.floating,
-              content: AwesomeSnackbarContent(
-                title: 'تم التحقق',
-                message: state.message,
-                contentType: ContentType.success,
-              ),
+            showMySnackbar(
+              context,
+              title: 'تم التحقق',
+              message: state.message,
+              type: SnackbarType.success,
             );
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(snackBar);
           } else if (state is AuthPasswordUpdated) {
-            final snackBar = SnackBar(
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              behavior: SnackBarBehavior.floating,
-              content: AwesomeSnackbarContent(
-                title: 'نجاح',
-                message: state.message,
-                contentType: ContentType.success,
-              ),
+            showMySnackbar(
+              context,
+              title: 'نجاح',
+              message: state.message,
+              type: SnackbarType.success,
             );
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(snackBar);
             Get.offAll(() => LoginScreen());
           }
         },

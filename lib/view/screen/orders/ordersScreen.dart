@@ -1,5 +1,6 @@
 import 'package:alkhafajdashboard/data/model/locationModel.dart';
 import 'package:alkhafajdashboard/data/model/orders/order_model.dart';
+import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:alkhafajdashboard/view/screen/orders/cubit/orders_cubit.dart';
 import 'package:alkhafajdashboard/view/screen/orders/preparation/orderPreparationScreen.dart';
 import 'package:alkhafajdashboard/view/screen/orders/widget/order_details_dialog.dart';
@@ -17,69 +18,134 @@ class OrdersScreen extends StatelessWidget {
       create: (_) => OrdersCubit()..initialize(),
       child: Scaffold(
         drawer: const DashboardDrawer(currentRoute: 'orders'),
-        backgroundColor: const Color(0xfff6f7fb),
-        body: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Builder(
-                builder:
-                    (context) => const MyAppbar(
-                      title: 'إدارة الطلبات',
-                      isBack: false,
-                      actions: [],
-                    ),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: BlocConsumer<OrdersCubit, OrdersState>(
-                  listener: (context, state) {
-                    if (state is OrdersError || state is OrdersSuccess) {
-                      final String message =
-                          state is OrdersError
-                              ? state.message
-                              : (state as OrdersSuccess).message;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(message)));
-                    }
-                  },
-                  builder: (context, state) {
-                    final OrdersCubit cubit = context.read<OrdersCubit>();
-                    if (state is OrdersLoading && cubit.orders.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+        backgroundColor: const Color(0xfff0f2f5),
+        body: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Builder(
+                  builder: (context) => const MyAppbar(
+                    title: 'إدارة الطلبات',
+                    isBack: false,
+                    actions: [],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: BlocConsumer<OrdersCubit, OrdersState>(
+                    listener: (context, state) {
+                      if (state is OrdersError || state is OrdersSuccess) {
+                        final String message = state is OrdersError
+                            ? state.message
+                            : (state as OrdersSuccess).message;
+                        final bool isError = state is OrdersError;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(
+                                  isError
+                                      ? Icons.error_outline
+                                      : Icons.check_circle_outline,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text(message)),
+                              ],
+                            ),
+                            backgroundColor: isError
+                                ? Colors.red.shade600
+                                : Colors.green.shade600,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 6,
+                            margin: const EdgeInsets.all(16),
+                          ),
+                        );
+                      }
+                    },
+                    builder: (context, state) {
+                      final OrdersCubit cubit = context.read<OrdersCubit>();
+                      if (state is OrdersLoading && cubit.orders.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 60,
+                                height: 60,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    ConstVar.pColor,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'جاري تحميل الطلبات...',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-                    final List<OrderModel> orders = cubit.visibleOrders;
+                      final List<OrderModel> orders = cubit.visibleOrders;
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _OrdersHeader(cubit: cubit, totalOrders: orders.length),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child:
-                              orders.isEmpty
-                                  ? const _EmptyOrdersView()
-                                  : ListView.separated(
+                      return Column(
+                        children: [
+                          _StatsBar(cubit: cubit),
+                          const SizedBox(height: 16),
+                          _ToolBar(cubit: cubit),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: orders.isEmpty
+                                ? const _EmptyOrdersView()
+                                : ListView.separated(
+                                    padding: const EdgeInsets.only(bottom: 16),
                                     itemCount: orders.length,
-                                    separatorBuilder:
-                                        (_, _) => const SizedBox(height: 12),
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 12),
                                     itemBuilder: (context, index) {
-                                      final OrderModel order = orders[index];
-                                      return _OrderCard(
-                                        order: order,
-                                        cubit: cubit,
+                                      return TweenAnimationBuilder<double>(
+                                        duration: Duration(
+                                          milliseconds: 300 + (index * 50),
+                                        ),
+                                        tween: Tween(begin: 0.0, end: 1.0),
+                                        curve: Curves.easeOutCubic,
+                                        builder: (context, value, child) {
+                                          return Transform.translate(
+                                            offset: Offset(0, 20 * (1 - value)),
+                                            child: Opacity(
+                                              opacity: value,
+                                              child: child,
+                                            ),
+                                          );
+                                        },
+                                        child: _OrderCard(
+                                          order: orders[index],
+                                          cubit: cubit,
+                                        ),
                                       );
                                     },
                                   ),
-                        ),
-                      ],
-                    );
-                  },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -87,331 +153,702 @@ class OrdersScreen extends StatelessWidget {
   }
 }
 
-class _OrdersHeader extends StatelessWidget {
-  const _OrdersHeader({required this.cubit, required this.totalOrders});
+// ═══════════════ Stats Bar ═══════════════
 
+class _StatsBar extends StatelessWidget {
+  const _StatsBar({required this.cubit});
   final OrdersCubit cubit;
-  final int totalOrders;
 
-  Future<String?> _askRequiredReason(BuildContext context, String title) async {
-    final TextEditingController controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(title),
-            content: TextField(
-              controller: controller,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'اكتب سبب الإجراء',
-                border: OutlineInputBorder(),
+  @override
+  Widget build(BuildContext context) {
+    int countByStatus(String status) =>
+        cubit.visibleOrders.where((o) => o.status == status).length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _StatItem(
+            label: 'الكل',
+            count: cubit.visibleOrders.length,
+            color: ConstVar.pColor,
+            icon: Icons.shopping_bag,
+          ),
+          _StatItem(
+            label: 'جديد',
+            count: countByStatus('pending'),
+            color: Colors.orange,
+            icon: Icons.fiber_new,
+          ),
+          _StatItem(
+            label: 'مؤكد',
+            count: countByStatus('confirmed'),
+            color: Colors.blue,
+            icon: Icons.verified,
+          ),
+          _StatItem(
+            label: 'تحضير',
+            count: countByStatus('preparing'),
+            color: Colors.purple,
+            icon: Icons.restaurant,
+          ),
+          _StatItem(
+            label: 'شحن',
+            count: countByStatus('shipped'),
+            color: Colors.teal,
+            icon: Icons.local_shipping,
+          ),
+          _StatItem(
+            label: 'مكتمل',
+            count: countByStatus('delivered'),
+            color: Colors.green,
+            icon: Icons.check_circle,
+          ),
+          _StatItem(
+            label: 'ملغي',
+            count: countByStatus('cancelled'),
+            color: Colors.red,
+            icon: Icons.cancel,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  const _StatItem({
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.icon,
+  });
+  final String label;
+  final int count;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: color,
+                ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('إلغاء'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final String value = controller.text.trim();
-                  if (value.isEmpty) {
-                    return;
-                  }
-                  Navigator.of(context).pop(value);
-                },
-                child: const Text('تأكيد'),
-              ),
-            ],
           ),
+        ],
+      ),
     );
   }
+}
 
-  Future<void> _bulkAssign(BuildContext context) async {
-    if (cubit.locations.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا توجد مواقع متاحة للتحويل')),
-      );
-      return;
-    }
+// ═══════════════ Toolbar ═══════════════
 
-    int selectedLocationId = cubit.locations.first.id;
-
-    final int? locationId = await showDialog<int>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('تحويل جماعي للموقع'),
-            content: StatefulBuilder(
-              builder:
-                  (context, setState) => DropdownButtonFormField<int>(
-                    value: selectedLocationId,
-                    items:
-                        cubit.locations
-                            .map(
-                              (location) => DropdownMenuItem<int>(
-                                value: location.id,
-                                child: Text(location.name),
-                              ),
-                            )
-                            .toList(),
-                    onChanged: (value) {
-                      if (value == null) {
-                        return;
-                      }
-                      setState(() {
-                        selectedLocationId = value;
-                      });
-                    },
-                  ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('إلغاء'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(selectedLocationId),
-                child: const Text('التالي'),
-              ),
-            ],
-          ),
-    );
-
-    if (locationId == null) {
-      return;
-    }
-
-    final LocationModel location = cubit.locations.firstWhere(
-      (location) => location.id == locationId,
-    );
-
-    final String? reason = await _askRequiredReason(
-      context,
-      'سبب التحويل الجماعي',
-    );
-
-    if (reason == null) {
-      return;
-    }
-
-    await cubit.bulkAssignOrders(location: location, notes: reason);
-  }
-
-  Future<void> _bulkCancel(BuildContext context) async {
-    final String? reason = await _askRequiredReason(
-      context,
-      'سبب الإلغاء الجماعي',
-    );
-
-    if (reason == null) {
-      return;
-    }
-
-    await cubit.bulkChangeStatus(status: 'cancelled', notes: reason);
-  }
+class _ToolBar extends StatelessWidget {
+  const _ToolBar({required this.cubit});
+  final OrdersCubit cubit;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'لوحة متابعة الطلبات',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xfff0f2f5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: TextField(
+                    onChanged: cubit.setSearchQuery,
+                    textDirection: TextDirection.rtl,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'بحث برقم الطلب، اسم العميل أو الهاتف...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      cubit.isAdmin
-                          ? 'فلترة وبحث وتحويل جماعي مع تحديث تلقائي كل 20 ثانية.'
-                          : 'عرض طلبات موقعك فقط مع تتبع التنفيذ وتحديث تلقائي.',
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xffeef2ff),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'عدد الطلبات',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$totalOrders',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo,
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: ConstVar.pColor.withValues(alpha: 0.6),
+                        size: 22,
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: cubit.setSearchQuery,
-                  decoration: InputDecoration(
-                    hintText: 'بحث برقم الطلب أو اسم العميل أو الهاتف',
-                    prefixIcon: const Icon(Icons.search),
-                    fillColor: Colors.grey.shade50,
-                    filled: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      border: InputBorder.none,
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
-              DropdownButton<OrdersSortMode>(
-                value: cubit.selectedSortMode,
-                items: const [
-                  DropdownMenuItem(
-                    value: OrdersSortMode.newest,
-                    child: Text('الأحدث'),
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xfff0f2f5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<OrdersSortMode>(
+                    value: cubit.selectedSortMode,
+                    isDense: true,
+                    icon: Icon(
+                      Icons.unfold_more,
+                      size: 20,
+                      color: ConstVar.pColor.withValues(alpha: 0.7),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: OrdersSortMode.newest,
+                        child: Text('الأحدث'),
+                      ),
+                      DropdownMenuItem(
+                        value: OrdersSortMode.oldest,
+                        child: Text('الأقدم'),
+                      ),
+                      DropdownMenuItem(
+                        value: OrdersSortMode.highestTotal,
+                        child: Text('الأعلى مبلغ'),
+                      ),
+                      DropdownMenuItem(
+                        value: OrdersSortMode.oldestPendingFirst,
+                        child: Text('المعلقة أولاً'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) cubit.setSortMode(value);
+                    },
                   ),
-                  DropdownMenuItem(
-                    value: OrdersSortMode.oldest,
-                    child: Text('الأقدم'),
-                  ),
-                  DropdownMenuItem(
-                    value: OrdersSortMode.highestTotal,
-                    child: Text('الأعلى إجمالي'),
-                  ),
-                  DropdownMenuItem(
-                    value: OrdersSortMode.oldestPendingFirst,
-                    child: Text('المعلقة أولاً'),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    cubit.setSortMode(value);
-                  }
-                },
+                ),
               ),
               const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'تحديث الآن',
+              _SmallIconBtn(
+                icon: Icons.refresh,
+                tooltip: 'تحديث',
                 onPressed: cubit.refreshSilently,
-                icon: const Icon(Icons.refresh),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _FilterChip(
-                label: 'الكل',
-                selected: cubit.selectedFilter == OrdersFilterStatus.all,
-                onTap: () => cubit.setFilter(OrdersFilterStatus.all),
-              ),
-              _FilterChip(
-                label: 'جديد',
-                selected: cubit.selectedFilter == OrdersFilterStatus.pending,
-                onTap: () => cubit.setFilter(OrdersFilterStatus.pending),
-              ),
-              _FilterChip(
-                label: 'مؤكد',
-                selected: cubit.selectedFilter == OrdersFilterStatus.confirmed,
-                onTap: () => cubit.setFilter(OrdersFilterStatus.confirmed),
-              ),
-              _FilterChip(
-                label: 'قيد التحضير',
-                selected: cubit.selectedFilter == OrdersFilterStatus.preparing,
-                onTap: () => cubit.setFilter(OrdersFilterStatus.preparing),
-              ),
-              _FilterChip(
-                label: 'بالشحن',
-                selected: cubit.selectedFilter == OrdersFilterStatus.shipped,
-                onTap: () => cubit.setFilter(OrdersFilterStatus.shipped),
-              ),
-              _FilterChip(
-                label: 'مكتمل',
-                selected: cubit.selectedFilter == OrdersFilterStatus.delivered,
-                onTap: () => cubit.setFilter(OrdersFilterStatus.delivered),
-              ),
-              _FilterChip(
-                label: 'ملغي',
-                selected: cubit.selectedFilter == OrdersFilterStatus.cancelled,
-                onTap: () => cubit.setFilter(OrdersFilterStatus.cancelled),
-              ),
-              _FilterChip(
-                label: 'طلبات مخفضة',
-                selected: cubit.selectedFilter == OrdersFilterStatus.discounted,
-                onTap: () => cubit.setFilter(OrdersFilterStatus.discounted),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Wrap(
-              spacing: 10,
-              runSpacing: 10,
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
               children: [
-                OutlinedButton.icon(
-                  onPressed: cubit.selectAllVisibleOrders,
-                  icon: const Icon(Icons.select_all),
-                  label: const Text('تحديد الكل'),
+                _FilterChip(
+                  label: 'الكل',
+                  selected: cubit.selectedFilter == OrdersFilterStatus.all,
+                  onTap: () => cubit.setFilter(OrdersFilterStatus.all),
                 ),
-                OutlinedButton.icon(
-                  onPressed: cubit.clearSelection,
-                  icon: const Icon(Icons.clear_all),
-                  label: const Text('إلغاء التحديد'),
+                _FilterChip(
+                  label: 'جديد',
+                  selected: cubit.selectedFilter == OrdersFilterStatus.pending,
+                  onTap: () => cubit.setFilter(OrdersFilterStatus.pending),
+                  color: Colors.orange,
                 ),
-                if (cubit.isAdmin)
-                  FilledButton.tonalIcon(
-                    onPressed:
-                        cubit.hasSelection ? () => _bulkAssign(context) : null,
-                    icon: const Icon(Icons.alt_route),
-                    label: Text('تحويل جماعي (${cubit.selectedCount})'),
-                  ),
-                FilledButton.tonalIcon(
-                  onPressed:
-                      cubit.hasSelection ? () => _bulkCancel(context) : null,
-                  icon: const Icon(Icons.cancel_outlined),
-                  label: Text('إلغاء جماعي (${cubit.selectedCount})'),
+                _FilterChip(
+                  label: 'مؤكد',
+                  selected:
+                      cubit.selectedFilter == OrdersFilterStatus.confirmed,
+                  onTap: () => cubit.setFilter(OrdersFilterStatus.confirmed),
+                  color: Colors.blue,
+                ),
+                _FilterChip(
+                  label: 'قيد التحضير',
+                  selected:
+                      cubit.selectedFilter == OrdersFilterStatus.preparing,
+                  onTap: () => cubit.setFilter(OrdersFilterStatus.preparing),
+                  color: Colors.purple,
+                ),
+                _FilterChip(
+                  label: 'بالشحن',
+                  selected: cubit.selectedFilter == OrdersFilterStatus.shipped,
+                  onTap: () => cubit.setFilter(OrdersFilterStatus.shipped),
+                  color: Colors.teal,
+                ),
+                _FilterChip(
+                  label: 'مكتمل',
+                  selected:
+                      cubit.selectedFilter == OrdersFilterStatus.delivered,
+                  onTap: () => cubit.setFilter(OrdersFilterStatus.delivered),
+                  color: Colors.green,
+                ),
+                _FilterChip(
+                  label: 'ملغي',
+                  selected:
+                      cubit.selectedFilter == OrdersFilterStatus.cancelled,
+                  onTap: () => cubit.setFilter(OrdersFilterStatus.cancelled),
+                  color: Colors.red,
+                ),
+                _FilterChip(
+                  label: 'مخفضة',
+                  selected:
+                      cubit.selectedFilter == OrdersFilterStatus.discounted,
+                  onTap: () => cubit.setFilter(OrdersFilterStatus.discounted),
+                  color: Colors.amber.shade700,
                 ),
               ],
+            ),
+          ),
+          if (cubit.isAdmin && cubit.hasSelection) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ConstVar.pColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: ConstVar.pColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          size: 16,
+                          color: ConstVar.pColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'تم تحديد ${cubit.selectedCount} طلب',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: ConstVar.pColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: cubit.clearSelection,
+                    icon: const Icon(Icons.close, size: 16),
+                    label: const Text(
+                      'إلغاء التحديد',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(
+                    onPressed: () => _bulkAssign(context, cubit),
+                    icon: const Icon(Icons.alt_route, size: 16),
+                    label: const Text(
+                      'تحويل جماعي',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ConstVar.pColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      elevation: 2,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  FilledButton.tonalIcon(
+                    onPressed: () =>
+                        cubit.bulkChangeStatus(status: 'cancelled'),
+                    icon: const Icon(Icons.cancel, size: 16),
+                    label: const Text(
+                      'إلغاء جماعي',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.red.shade50,
+                      foregroundColor: Colors.red.shade700,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _bulkAssign(BuildContext context, OrdersCubit cubit) async {
+    if (cubit.locations.isEmpty) return;
+    int selectedLocationId = cubit.locations.first.id;
+
+    final int? locationId = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تحويل جماعي للموقع'),
+        content: StatefulBuilder(
+          builder: (context, setState) => DropdownButtonFormField<int>(
+            initialValue: selectedLocationId,
+            items: cubit.locations
+                .map(
+                  (l) =>
+                      DropdownMenuItem<int>(value: l.id, child: Text(l.name)),
+                )
+                .toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => selectedLocationId = v);
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(selectedLocationId),
+            child: const Text('تأكيد'),
+          ),
+        ],
+      ),
+    );
+    if (locationId == null) return;
+
+    final LocationModel location = cubit.locations.firstWhere(
+      (l) => l.id == locationId,
+    );
+    await cubit.bulkAssignOrders(location: location);
+  }
+}
+
+class _SmallIconBtn extends StatelessWidget {
+  const _SmallIconBtn({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: const Color(0xfff5f7fa),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onPressed,
+          child: Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            child: Icon(icon, size: 20, color: Colors.grey.shade700),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════ Order Card ═══════════════
+
+class _OrderCard extends StatelessWidget {
+  const _OrderCard({required this.order, required this.cubit});
+  final OrderModel order;
+  final OrdersCubit cubit;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isAdmin = cubit.isAdmin;
+    final bool isBusy = context.watch<OrdersCubit>().state is OrdersSaving;
+    final SuggestedLocation? suggestion = cubit.getSuggestedLocation(order);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: order.isLate
+            ? Border.all(color: Colors.red.shade200, width: 2)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ── Header ──
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _statusColor(order.status).withValues(alpha: 0.04),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                if (isAdmin)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    child: Checkbox(
+                      value: cubit.isOrderSelected(order),
+                      onChanged: (_) => cubit.toggleOrderSelection(order),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      activeColor: ConstVar.pColor,
+                    ),
+                  ),
+                _StatusBadge(status: order.status),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '#${order.id} - ${order.customerName}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.phone,
+                            size: 13,
+                            color: Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            order.customerPhone,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: order.isLate
+                        ? Colors.red.shade50
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.schedule,
+                        size: 15,
+                        color: order.isLate
+                            ? Colors.red.shade700
+                            : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${order.waitingDuration.inMinutes} د',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: order.isLate
+                              ? Colors.red.shade700
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                _SmallIconBtn(
+                  icon: isAdmin ? Icons.visibility : Icons.fact_check,
+                  tooltip: isAdmin ? 'التفاصيل' : 'صفحة التجهيز',
+                  onPressed: () async {
+                    if (isAdmin) {
+                      await showDialog<void>(
+                        context: context,
+                        builder: (_) => OrderDetailsDialog(order: order),
+                      );
+                      return;
+                    }
+                    final bool? updated = await Navigator.of(context)
+                        .push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: cubit,
+                              child: OrderPreparationScreen(order: order),
+                            ),
+                          ),
+                        );
+                    if (updated == true && context.mounted) {
+                      await context.read<OrdersCubit>().refreshSilently();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // ── Body ──
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    _ModernInfoChip(
+                      icon: Icons.attach_money,
+                      text: '${order.total.toStringAsFixed(0)} د.ع',
+                      gradient: [Colors.green.shade50, Colors.green.shade100],
+                      color: Colors.green.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    _ModernInfoChip(
+                      icon: Icons.inventory_2,
+                      text: '${order.totalItemsCount} عنصر',
+                      gradient: [Colors.blue.shade50, Colors.blue.shade100],
+                      color: Colors.blue.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    _ModernInfoChip(
+                      icon: Icons.grid_view,
+                      text: '${order.totalQuantity} قطعة',
+                      gradient: [Colors.purple.shade50, Colors.purple.shade100],
+                      color: Colors.purple.shade700,
+                    ),
+                    if (order.discountedItemsCount > 0) ...[
+                      const SizedBox(width: 8),
+                      _ModernInfoChip(
+                        icon: Icons.local_offer,
+                        text: '${order.discountedItemsCount} مخفض',
+                        gradient: [Colors.amber.shade50, Colors.amber.shade100],
+                        color: Colors.amber.shade800,
+                      ),
+                    ],
+                    const Spacer(),
+                    if (order.assignedLocationName != null)
+                      _ModernInfoChip(
+                        icon: Icons.location_on,
+                        text: order.assignedLocationName!,
+                        gradient: [
+                          ConstVar.pColor.withValues(alpha: 0.1),
+                          ConstVar.pColor.withValues(alpha: 0.15),
+                        ],
+                        color: ConstVar.pColor,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _OrderTimeline(status: order.status),
+              ],
+            ),
+          ),
+
+          // ── Inline Status Actions ──
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xfff8f9fa),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(12),
+              ),
+            ),
+            child: _InlineStatusActions(
+              order: order,
+              cubit: cubit,
+              isBusy: isBusy,
+              isAdmin: isAdmin,
+              suggestion: suggestion,
             ),
           ),
         ],
@@ -420,265 +857,333 @@ class _OrdersHeader extends StatelessWidget {
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.cubit});
+// ═══════════════ Inline Status Actions ═══════════════
+
+class _InlineStatusActions extends StatelessWidget {
+  const _InlineStatusActions({
+    required this.order,
+    required this.cubit,
+    required this.isBusy,
+    required this.isAdmin,
+    required this.suggestion,
+  });
 
   final OrderModel order;
   final OrdersCubit cubit;
-
-  Future<String?> _askRequiredReason(BuildContext context, String title) async {
-    final TextEditingController controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(title),
-            content: TextField(
-              controller: controller,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'اكتب السبب',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('إلغاء'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final String value = controller.text.trim();
-                  if (value.isEmpty) {
-                    return;
-                  }
-                  Navigator.of(context).pop(value);
-                },
-                child: const Text('تأكيد'),
-              ),
-            ],
-          ),
-    );
-  }
-
-  Future<void> _assignToLocation(
-    BuildContext context,
-    LocationModel location,
-    SuggestedLocation? suggestion,
-  ) async {
-    final String? reason = await _askRequiredReason(
-      context,
-      location.id == suggestion?.location.id
-          ? 'سبب التحويل المقترح'
-          : 'سبب التحويل اليدوي',
-    );
-
-    if (reason == null) {
-      return;
-    }
-
-    await cubit.assignOrder(order: order, location: location, notes: reason);
-  }
-
-  Future<void> _cancelOrder(BuildContext context) async {
-    final String? reason = await _askRequiredReason(context, 'سبب إلغاء الطلب');
-    if (reason == null) {
-      return;
-    }
-
-    await cubit.changeOrderStatus(
-      order: order,
-      status: 'cancelled',
-      notes: reason,
-    );
-  }
+  final bool isBusy;
+  final bool isAdmin;
+  final SuggestedLocation? suggestion;
 
   @override
   Widget build(BuildContext context) {
-    final SuggestedLocation? suggestion = cubit.getSuggestedLocation(order);
-    final List<LocationModel> selectableLocations = cubit.locations;
-    final bool isAdmin = cubit.isAdmin;
+    final List<String> allowed = cubit.getAllowedNextStatuses(order);
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: order.isLate ? Colors.red.shade200 : Colors.grey.shade200,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    if (allowed.isEmpty) {
+      return Row(
+        children: [
+          Icon(Icons.check_circle, size: 16, color: Colors.grey.shade400),
+          const SizedBox(width: 6),
+          Text(
+            order.status == 'cancelled' ? 'تم إلغاء الطلب' : 'الطلب مكتمل',
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
           ),
         ],
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        ...allowed.where((s) => s != 'cancelled').map((nextStatus) {
+          if (isAdmin &&
+              order.status == 'pending' &&
+              nextStatus == 'confirmed') {
+            return _LocationAssignDropdown(
+              order: order,
+              cubit: cubit,
+              isBusy: isBusy,
+              suggestion: suggestion,
+            );
+          }
+          return _ActionButton(
+            label: _nextActionLabel(nextStatus),
+            icon: _nextActionIcon(nextStatus),
+            color: _statusColor(nextStatus),
+            isBusy: isBusy,
+            onPressed: () => cubit.changeOrderStatus(
+              order: order,
+              status: nextStatus,
+              locationId: cubit.currentUser?.locationId,
+            ),
+          );
+        }),
+        if (allowed.contains('cancelled'))
+          _ActionButton(
+            label: 'إلغاء',
+            icon: Icons.close,
+            color: Colors.red,
+            isBusy: isBusy,
+            outlined: true,
+            onPressed: () =>
+                cubit.changeOrderStatus(order: order, status: 'cancelled'),
+          ),
+        if (isAdmin && suggestion != null && order.status == 'pending')
+          Text(
+            '📍 مقترح: ${suggestion!.location.name} (${suggestion!.distance.toStringAsFixed(1)} كم)',
+            style: TextStyle(
+              fontSize: 12,
+              color: ConstVar.pColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _nextActionLabel(String status) {
+    switch (status) {
+      case 'confirmed':
+        return 'تأكيد';
+      case 'preparing':
+        return 'بدء التحضير';
+      case 'shipped':
+        return 'شحن';
+      case 'delivered':
+        return 'تم التسليم';
+      default:
+        return status;
+    }
+  }
+
+  IconData _nextActionIcon(String status) {
+    switch (status) {
+      case 'confirmed':
+        return Icons.check;
+      case 'preparing':
+        return Icons.restaurant;
+      case 'shipped':
+        return Icons.local_shipping;
+      case 'delivered':
+        return Icons.done_all;
+      default:
+        return Icons.arrow_forward;
+    }
+  }
+}
+
+class _LocationAssignDropdown extends StatelessWidget {
+  const _LocationAssignDropdown({
+    required this.order,
+    required this.cubit,
+    required this.isBusy,
+    required this.suggestion,
+  });
+  final OrderModel order;
+  final OrdersCubit cubit;
+  final bool isBusy;
+  final SuggestedLocation? suggestion;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue.shade700,
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Checkbox(
-                value: cubit.isOrderSelected(order),
-                onChanged: (_) => cubit.toggleOrderSelection(order),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'الطلب #${order.id} - ${order.customerName}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+      child: PopupMenuButton<LocationModel>(
+        enabled: !isBusy,
+        tooltip: 'تأكيد وتحويل لموقع',
+        offset: const Offset(0, 45),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 8,
+        itemBuilder: (_) => cubit.locations
+            .map(
+              (location) => PopupMenuItem<LocationModel>(
+                value: location,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: location.id == suggestion?.location.id
+                              ? Colors.amber.shade50
+                              : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          location.id == suggestion?.location.id
+                              ? Icons.star
+                              : Icons.location_on,
+                          size: 20,
+                          color: location.id == suggestion?.location.id
+                              ? Colors.amber.shade700
+                              : Colors.grey.shade600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _ChipLabel(
-                          label: 'الحالة: ${_statusLabel(order.status)}',
-                        ),
-                        _ChipLabel(
-                          label:
-                              'الموقع الحالي: ${order.assignedLocationName ?? 'غير محدد'}',
-                        ),
-                        _ChipLabel(
-                          label: 'الإجمالي: ${order.total.toStringAsFixed(2)}',
-                        ),
-                        _ChipLabel(label: 'العناصر: ${order.totalItemsCount}'),
-                        _ChipLabel(label: 'الكمية: ${order.totalQuantity}'),
-                        if (order.discountedItemsCount > 0)
-                          _ChipLabel(
-                            label:
-                                'مخفضة: ${order.discountedItemsCount}/${order.totalItemsCount}',
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _OrderStatusTimeline(status: order.status),
-                  ],
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () async {
-                  if (isAdmin) {
-                    await showDialog<void>(
-                      context: context,
-                      builder: (_) => OrderDetailsDialog(order: order),
-                    );
-                    return;
-                  }
-
-                  final bool? updated = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder:
-                          (_) => BlocProvider.value(
-                            value: cubit,
-                            child: OrderPreparationScreen(order: order),
-                          ),
-                    ),
-                  );
-
-                  if (updated == true && context.mounted) {
-                    await context.read<OrdersCubit>().refreshSilently();
-                  }
-                },
-                icon: Icon(
-                  isAdmin
-                      ? Icons.visibility_outlined
-                      : Icons.fact_check_outlined,
-                ),
-                label: Text(isAdmin ? 'التفاصيل' : 'فتح صفحة التجهيز'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              order.isLate
-                  ? 'متأخر منذ ${order.waitingDuration.inMinutes} دقيقة'
-                  : 'زمن الانتظار: ${order.waitingDuration.inMinutes} دقيقة',
-              style: TextStyle(
-                color: order.isLate ? Colors.red.shade700 : Colors.indigo,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              suggestion == null
-                  ? 'لا يوجد اقتراح موقع حالياً'
-                  : 'أقرب موقع مقترح: ${suggestion.location.name} (${suggestion.distance.toStringAsFixed(2)} كم)',
-              style: TextStyle(
-                color:
-                    suggestion == null ? Colors.grey.shade600 : Colors.indigo,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (isAdmin)
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                ...selectableLocations.map(
-                  (location) => OutlinedButton.icon(
-                    onPressed:
-                        stateBusy(context) ||
-                                !cubit.canTransitionTo(order, 'confirmed')
-                            ? null
-                            : () => _assignToLocation(
-                              context,
-                              location,
-                              suggestion,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              location.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
-                    icon: const Icon(Icons.alt_route),
-                    label: Text('تحويل إلى ${location.name}'),
+                            if (location.id == suggestion?.location.id)
+                              Text(
+                                'موقع مقترح (${suggestion!.distance.toStringAsFixed(1)} كم)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.amber.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                FilledButton.tonalIcon(
-                  onPressed:
-                      stateBusy(context) ||
-                              !cubit.canTransitionTo(order, 'cancelled')
-                          ? null
-                          : () => _cancelOrder(context),
-                  icon: const Icon(Icons.close),
-                  label: const Text('إلغاء الطلب'),
-                ),
-              ],
+              ),
             )
-          else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xfff8fafc),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Text(
-                'اضغط على "فتح صفحة التجهيز" لتحديث الحالة ضمن المسار المنطقي للطلب.',
+            .toList(),
+        onSelected: (location) =>
+            cubit.assignOrder(order: order, location: location),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check, size: 16, color: Colors.white),
+              const SizedBox(width: 8),
+              const Text(
+                'تأكيد وتحويل',
                 style: TextStyle(
-                  color: Colors.grey.shade700,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down, size: 20, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.isBusy,
+    required this.onPressed,
+    this.outlined = false,
+  });
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool isBusy;
+  final bool outlined;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: isBusy ? null : onPressed,
+      icon: Icon(icon, size: 16, color: Colors.white),
+      label: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        elevation: 0,
+      ),
+    );
+  }
+}
+
+// ═══════════════ Shared Widgets ═══════════════
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: _statusColor(status).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        _statusLabel(status),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: _statusColor(status),
+        ),
+      ),
+    );
+  }
+}
+
+class _ModernInfoChip extends StatelessWidget {
+  const _ModernInfoChip({
+    required this.icon,
+    required this.text,
+    required this.gradient,
+    required this.color,
+  });
+  final IconData icon;
+  final String text;
+  final List<Color> gradient;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
             ),
+          ),
         ],
       ),
     );
   }
-
-  bool stateBusy(BuildContext context) =>
-      context.watch<OrdersCubit>().state is OrdersSaving;
 }
 
 class _FilterChip extends StatelessWidget {
@@ -686,32 +1191,39 @@ class _FilterChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.color,
   });
-
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color:
-              selected ? Colors.indigo.withValues(alpha: 0.12) : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? Colors.indigo : Colors.grey.shade300,
+    final Color c = color ?? ConstVar.pColor;
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? c.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? c : Colors.grey.shade300,
+              width: 1.5,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.indigo : Colors.black87,
-            fontWeight: FontWeight.w600,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: selected ? c : Colors.grey.shade600,
+              fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+            ),
           ),
         ),
       ),
@@ -719,21 +1231,93 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _ChipLabel extends StatelessWidget {
-  const _ChipLabel({required this.label});
-
-  final String label;
+class _OrderTimeline extends StatelessWidget {
+  const _OrderTimeline({required this.status});
+  final String status;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xfff8fafc),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Text(label),
+    if (status == 'cancelled') {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cancel, size: 16, color: Colors.red),
+            SizedBox(width: 6),
+            Text(
+              'تم إلغاء الطلب',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final int currentIdx = _orderFlowStatuses.indexOf(status);
+
+    return Row(
+      children: List.generate(_orderFlowStatuses.length * 2 - 1, (i) {
+        if (i.isOdd) {
+          final int stepBefore = i ~/ 2;
+          final bool done = currentIdx > stepBefore;
+          return Expanded(
+            child: Container(
+              height: 2,
+              color: done ? Colors.green.shade400 : Colors.grey.shade300,
+            ),
+          );
+        }
+
+        final int stepIdx = i ~/ 2;
+        final String step = _orderFlowStatuses[stepIdx];
+        final bool done = currentIdx >= stepIdx;
+        final bool current = currentIdx == stepIdx;
+
+        return Column(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: current
+                    ? ConstVar.pColor
+                    : done
+                    ? Colors.green
+                    : Colors.grey.shade300,
+              ),
+              child: Icon(
+                done ? Icons.check : Icons.circle,
+                size: done ? 14 : 8,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _statusLabel(step),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: current ? FontWeight.bold : FontWeight.w500,
+                color: current
+                    ? ConstVar.pColor
+                    : done
+                    ? Colors.green.shade700
+                    : Colors.grey.shade500,
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 }
@@ -744,29 +1328,54 @@ class _EmptyOrdersView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.inventory_2_outlined,
-            size: 72,
-            color: Colors.grey.shade400,
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 600),
+        tween: Tween(begin: 0.0, end: 1.0),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: 0.8 + (0.2 * value),
+            child: Opacity(opacity: value, child: child),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'لا توجد طلبات مطابقة',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.inbox, size: 64, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              const Text(
+                'لا توجد طلبات مطابقة',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'جرّب تغيير الفلاتر أو كلمة البحث',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'غيّر الفلاتر أو كلمة البحث لعرض نتائج أخرى.',
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
+
+// ═══════════════ Helpers ═══════════════
 
 String _statusLabel(String status) {
   switch (status) {
@@ -775,15 +1384,34 @@ String _statusLabel(String status) {
     case 'confirmed':
       return 'مؤكد';
     case 'preparing':
-      return 'قيد التحضير';
+      return 'تحضير';
     case 'shipped':
-      return 'بالشحن';
+      return 'شحن';
     case 'delivered':
       return 'مكتمل';
     case 'cancelled':
       return 'ملغي';
     default:
       return status;
+  }
+}
+
+Color _statusColor(String status) {
+  switch (status) {
+    case 'pending':
+      return Colors.orange;
+    case 'confirmed':
+      return Colors.blue;
+    case 'preparing':
+      return Colors.purple;
+    case 'shipped':
+      return Colors.teal;
+    case 'delivered':
+      return Colors.green;
+    case 'cancelled':
+      return Colors.red;
+    default:
+      return Colors.grey;
   }
 }
 
@@ -794,85 +1422,3 @@ const List<String> _orderFlowStatuses = <String>[
   'shipped',
   'delivered',
 ];
-
-int _statusStepIndex(String status) {
-  if (status == 'cancelled') {
-    return -1;
-  }
-  return _orderFlowStatuses.indexOf(status);
-}
-
-class _OrderStatusTimeline extends StatelessWidget {
-  const _OrderStatusTimeline({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    if (status == 'cancelled') {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.shade200),
-        ),
-        child: const Text(
-          'تم إلغاء الطلب',
-          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-        ),
-      );
-    }
-
-    final int currentIndex = _statusStepIndex(status);
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: List<Widget>.generate(_orderFlowStatuses.length, (index) {
-        final String step = _orderFlowStatuses[index];
-        final bool done = currentIndex >= index;
-        final bool current = currentIndex == index;
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color:
-                current
-                    ? Colors.indigo.withValues(alpha: 0.16)
-                    : done
-                    ? Colors.green.withValues(alpha: 0.14)
-                    : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color:
-                  current
-                      ? Colors.indigo
-                      : done
-                      ? Colors.green.shade400
-                      : Colors.grey.shade300,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                done ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 14,
-                color: done ? Colors.green : Colors.grey.shade500,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                _statusLabel(step),
-                style: TextStyle(
-                  fontWeight: current ? FontWeight.bold : FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-}
