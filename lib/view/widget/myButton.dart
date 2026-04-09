@@ -1,3 +1,4 @@
+import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:flutter/material.dart';
 
@@ -5,14 +6,14 @@ enum MyButtonVariant { primary, secondary, danger, ghost }
 
 class MyButton extends StatelessWidget {
   const MyButton({
-    Key? key,
+    super.key,
     this.onPressed,
     this.text,
     this.icon,
     this.variant = MyButtonVariant.primary,
     this.expand = false,
     this.padding,
-  }) : super(key: key);
+  });
 
   final VoidCallback? onPressed;
   final String? text;
@@ -28,30 +29,36 @@ class MyButton extends StatelessWidget {
 
     return InkWell(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         width: expand ? double.infinity : null,
         padding:
-            padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding ?? const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
-          color: isDisabled ? Colors.grey.shade300 : style.backgroundColor,
-          borderRadius: BorderRadius.circular(10),
+          gradient: isDisabled ? null : style.gradient,
+          color: isDisabled
+              ? Colors.grey.shade300
+              : style.gradient == null
+              ? style.backgroundColor
+              : null,
+          borderRadius: BorderRadius.circular(18),
           border: style.borderColor == null
               ? null
               : Border.all(color: style.borderColor!, width: 1.2),
-          boxShadow: [
+          boxShadow: <BoxShadow>[
             BoxShadow(
               color: isDisabled ? Colors.transparent : style.shadowColor,
-              blurRadius: 4,
-              offset: Offset(0, 2),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Row(
           mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) ...[
+          children: <Widget>[
+            if (icon != null) ...<Widget>[
               Icon(
                 icon,
                 size: 18,
@@ -63,12 +70,12 @@ class MyButton extends StatelessWidget {
             ],
             Flexible(
               child: MyText(
-                text ?? ' أضغط هنا',
+                text ?? 'اضغط هنا',
                 color: isDisabled
                     ? Colors.grey.shade600
                     : style.foregroundColor,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -83,30 +90,31 @@ class MyButton extends StatelessWidget {
       case MyButtonVariant.secondary:
         return _ButtonStyle(
           backgroundColor: Colors.white,
-          foregroundColor: Colors.indigo,
-          borderColor: Colors.indigo.withValues(alpha: 0.45),
-          shadowColor: Colors.indigo.withValues(alpha: 0.08),
+          foregroundColor: ConstVar.pColor,
+          borderColor: ConstVar.borderColor,
+          shadowColor: ConstVar.pColor.withValues(alpha: 0.08),
         );
       case MyButtonVariant.danger:
         return _ButtonStyle(
-          backgroundColor: Colors.red.shade600,
+          backgroundColor: ConstVar.dangerColor,
           foregroundColor: Colors.white,
           borderColor: null,
-          shadowColor: Colors.red.withValues(alpha: 0.2),
+          shadowColor: ConstVar.dangerColor.withValues(alpha: 0.22),
         );
       case MyButtonVariant.ghost:
         return _ButtonStyle(
-          backgroundColor: Colors.grey.shade100,
-          foregroundColor: Colors.black87,
-          borderColor: Colors.grey.shade300,
-          shadowColor: Colors.transparent,
+          backgroundColor: Colors.white.withValues(alpha: 0.78),
+          foregroundColor: ConstVar.textPrimary,
+          borderColor: ConstVar.borderColor,
+          shadowColor: Colors.black.withValues(alpha: 0.02),
         );
       case MyButtonVariant.primary:
         return _ButtonStyle(
-          backgroundColor: Colors.indigo,
+          backgroundColor: ConstVar.pColor,
           foregroundColor: Colors.white,
           borderColor: null,
-          shadowColor: Colors.black26,
+          shadowColor: ConstVar.pColor.withValues(alpha: 0.22),
+          gradient: ConstVar.brandGradient,
         );
     }
   }
@@ -118,10 +126,12 @@ class _ButtonStyle {
     required this.foregroundColor,
     required this.borderColor,
     required this.shadowColor,
+    this.gradient,
   });
 
   final Color backgroundColor;
   final Color foregroundColor;
   final Color? borderColor;
   final Color shadowColor;
+  final Gradient? gradient;
 }

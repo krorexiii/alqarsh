@@ -9,7 +9,10 @@ class OrderModel {
   final String status;
   final double subtotal;
   final double deliveryFee;
+  final double discountAmount;
   final double total;
+  final int? discountCodeId;
+  final String? discountCodeSnapshot;
   final String? note;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -29,7 +32,10 @@ class OrderModel {
     required this.status,
     required this.subtotal,
     required this.deliveryFee,
+    required this.discountAmount,
     required this.total,
+    required this.discountCodeId,
+    required this.discountCodeSnapshot,
     required this.note,
     required this.createdAt,
     required this.updatedAt,
@@ -50,6 +56,10 @@ class OrderModel {
 
   int get discountedItemsCount =>
       items.where((item) => item.discountPercentSnapshot > 0).length;
+
+  bool get hasPromoDiscount => discountAmount > 0;
+
+  bool get hasAnyDiscount => discountedItemsCount > 0 || hasPromoDiscount;
 
   int get totalItemsCount => items.length;
 
@@ -79,11 +89,10 @@ class OrderModel {
         json['customers'] as Map<String, dynamic>?;
     final Map<String, dynamic>? assignedLocationJson =
         json['assigned_location'] as Map<String, dynamic>?;
-    final List<OrderStatusHistoryModel> parsedHistory =
-        historyJson
-            .whereType<Map<String, dynamic>>()
-            .map(OrderStatusHistoryModel.fromJson)
-            .toList();
+    final List<OrderStatusHistoryModel> parsedHistory = historyJson
+        .whereType<Map<String, dynamic>>()
+        .map(OrderStatusHistoryModel.fromJson)
+        .toList();
 
     return OrderModel(
       id: json['id'] as int? ?? 0,
@@ -92,16 +101,17 @@ class OrderModel {
       status: (json['status'] ?? 'pending').toString(),
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
       deliveryFee: (json['delivery_fee'] as num?)?.toDouble() ?? 0,
+      discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
       total: (json['total'] as num?)?.toDouble() ?? 0,
+      discountCodeId: (json['discount_code_id'] as num?)?.toInt(),
+      discountCodeSnapshot: json['discount_code_snapshot']?.toString(),
       note: json['note']?.toString(),
-      createdAt:
-          json['created_at'] == null
-              ? null
-              : DateTime.tryParse(json['created_at'].toString()),
-      updatedAt:
-          json['updated_at'] == null
-              ? null
-              : DateTime.tryParse(json['updated_at'].toString()),
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.tryParse(json['created_at'].toString()),
+      updatedAt: json['updated_at'] == null
+          ? null
+          : DateTime.tryParse(json['updated_at'].toString()),
       customerLat:
           (customerJson?['l_x'] as num?)?.toDouble() ??
           (customerJson?['L_X'] as num?)?.toDouble() ??
@@ -118,19 +128,18 @@ class OrderModel {
                   json['customer_location_name'] ??
                   'عميل')
               .toString(),
-      customerPhone:
-          (customerJson?['phone'] ?? json['customer_phone'] ?? '').toString(),
+      customerPhone: (customerJson?['phone'] ?? json['customer_phone'] ?? '')
+          .toString(),
       assignedLocationId:
           json['assigned_location_id'] as int? ??
           assignedLocationJson?['id'] as int?,
       assignedLocationName:
           assignedLocationJson?['name']?.toString() ??
           json['assigned_location_name']?.toString(),
-      items:
-          itemsJson
-              .whereType<Map<String, dynamic>>()
-              .map(OrderItemModel.fromJson)
-              .toList(),
+      items: itemsJson
+          .whereType<Map<String, dynamic>>()
+          .map(OrderItemModel.fromJson)
+          .toList(),
       history: parsedHistory,
     );
   }
@@ -148,7 +157,10 @@ class OrderModel {
       status: status ?? this.status,
       subtotal: subtotal,
       deliveryFee: deliveryFee,
+      discountAmount: discountAmount,
       total: total,
+      discountCodeId: discountCodeId,
+      discountCodeSnapshot: discountCodeSnapshot,
       note: note,
       createdAt: createdAt,
       updatedAt: updatedAt,

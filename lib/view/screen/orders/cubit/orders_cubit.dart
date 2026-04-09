@@ -78,11 +78,10 @@ class OrdersCubit extends Cubit<OrdersState> {
       if (isClosed) {
         return;
       }
-      locations =
-          locationRows
-              .whereType<Map<String, dynamic>>()
-              .map(LocationModel.fromJson)
-              .toList();
+      locations = locationRows
+          .whereType<Map<String, dynamic>>()
+          .map(LocationModel.fromJson)
+          .toList();
       orders = await _repository.fetchOrders();
       if (isClosed) {
         return;
@@ -161,10 +160,9 @@ class OrdersCubit extends Cubit<OrdersState> {
     _safeEmit(OrdersLoaded());
   }
 
-  List<OrderModel> get selectedOrders =>
-      visibleOrders
-          .where((order) => selectedOrderIds.contains(order.id))
-          .toList();
+  List<OrderModel> get selectedOrders => visibleOrders
+      .where((order) => selectedOrderIds.contains(order.id))
+      .toList();
 
   List<String> getAllowedNextStatuses(OrderModel order) {
     switch (order.status) {
@@ -197,7 +195,7 @@ class OrdersCubit extends Cubit<OrdersState> {
 
     if (selectedFilter != OrdersFilterStatus.all) {
       if (selectedFilter == OrdersFilterStatus.discounted) {
-        scoped = scoped.where((order) => order.discountedItemsCount > 0);
+        scoped = scoped.where((order) => order.hasAnyDiscount);
       } else {
         final String filterStatus = selectedFilter.name;
         scoped = scoped.where((order) => order.status == filterStatus);
@@ -352,10 +350,9 @@ class OrdersCubit extends Cubit<OrdersState> {
       return;
     }
 
-    final List<OrderModel> targets =
-        selectedOrders
-            .where((order) => canTransitionTo(order, 'confirmed'))
-            .toList();
+    final List<OrderModel> targets = selectedOrders
+        .where((order) => canTransitionTo(order, 'confirmed'))
+        .toList();
 
     if (targets.isEmpty) {
       _safeEmit(OrdersError('لا توجد طلبات قابلة للتحويل في الاختيار الحالي'));
@@ -387,10 +384,9 @@ class OrdersCubit extends Cubit<OrdersState> {
       return;
     }
 
-    final List<OrderModel> targets =
-        selectedOrders
-            .where((order) => canTransitionTo(order, status))
-            .toList();
+    final List<OrderModel> targets = selectedOrders
+        .where((order) => canTransitionTo(order, status))
+        .toList();
 
     if (targets.isEmpty) {
       _safeEmit(OrdersError('لا توجد طلبات تدعم هذا الانتقال'));

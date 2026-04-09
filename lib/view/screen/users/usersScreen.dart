@@ -1,14 +1,13 @@
 import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:alkhafajdashboard/view/screen/users/cubit/users_cubit.dart';
-import 'package:alkhafajdashboard/view/widget/dashboardDrawer.dart';
+import 'package:alkhafajdashboard/view/widget/MyDropList.dart';
+import 'package:alkhafajdashboard/view/widget/dashboard_scaffold.dart';
 import 'package:alkhafajdashboard/view/widget/myButton.dart';
 import 'package:alkhafajdashboard/view/widget/myCard.dart';
+import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:alkhafajdashboard/view/widget/myTextFeild.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../../widget/MyDropList.dart';
-import '../../widget/myAppbar.dart';
 
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
@@ -22,9 +21,21 @@ class _UsersScreenState extends State<UsersScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   String? selectedRole;
   String? selectedLocation;
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final UsersCubit cubit = context.read<UsersCubit>();
+      if (cubit.users.isEmpty || cubit.locations.isEmpty) {
+        cubit.fetchUsers();
+      }
+    });
+  }
 
   void _resetForm(UsersCubit cubit) {
     _formKey.currentState?.reset();
@@ -42,14 +53,17 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   List<dynamic> _filteredUsers(UsersCubit cubit) {
-    final query = searchController.text.trim().toLowerCase();
+    final String query = searchController.text.trim().toLowerCase();
     if (query.isEmpty) {
       return cubit.users;
     }
 
-    return cubit.users.where((user) {
-      final locationName = _locationName(cubit, user.locationId).toLowerCase();
-      final roleName = _roleName(user.role).toLowerCase();
+    return cubit.users.where((dynamic user) {
+      final String locationName = _locationName(
+        cubit,
+        user.locationId,
+      ).toLowerCase();
+      final String roleName = _roleName(user.role).toLowerCase();
       return user.name.toLowerCase().contains(query) ||
           (user.username ?? '').toLowerCase().contains(query) ||
           locationName.contains(query) ||
@@ -59,7 +73,9 @@ class _UsersScreenState extends State<UsersScreen> {
 
   String _roleName(String roleId) {
     try {
-      return ConstVar.roleList.firstWhere((role) => role.id == roleId).name;
+      return ConstVar.roleList
+          .firstWhere((dynamic role) => role.id == roleId)
+          .name;
     } catch (_) {
       return roleId;
     }
@@ -68,7 +84,7 @@ class _UsersScreenState extends State<UsersScreen> {
   String _locationName(UsersCubit cubit, int locationId) {
     try {
       return cubit.locations
-          .firstWhere((location) => location.id == locationId)
+          .firstWhere((dynamic location) => location.id == locationId)
           .name;
     } catch (_) {
       return 'غير محدد';
@@ -76,8 +92,8 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   void _selectUser(UsersCubit cubit, dynamic user) {
-    emailController.text = user.username ?? "";
-    passwordController.text = user.password ?? "";
+    emailController.text = user.username ?? '';
+    passwordController.text = user.password ?? '';
     nameController.text = user.name;
 
     setState(() {
@@ -92,7 +108,6 @@ class _UsersScreenState extends State<UsersScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
     if (selectedRole == null || selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('يرجى اختيار الصلاحية والموقع')),
@@ -111,304 +126,118 @@ class _UsersScreenState extends State<UsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: const DashboardDrawer(currentRoute: 'users'),
-      backgroundColor: const Color(0xfff6f7fb),
-      body: Container(
-        padding: const EdgeInsets.all(12),
-        child: Column( 
-          children: [
-            Builder(
-              builder: (context) => const MyAppbar(
-                title: "إدارة المستخدمين",
-                isBack: false,
-                actions: [],
-              ),
-            ),
-            const SizedBox(height: 10),
-            BlocConsumer<UsersCubit, UsersState>(
-              listener: (context, state) {
-                if (state is UsersError) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(state.message)));
-                } else if (state is UsersActionSuccess) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(state.message)));
-                  _resetForm(context.read<UsersCubit>());
-                }
-              },
-              builder: (context, state) {
-                var cubit = BlocProvider.of<UsersCubit>(context);
-                final filteredUsers = _filteredUsers(cubit);
-                final bool isBusy = state is UsersLoading;
-                if (state is UsersLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                return Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: MyCard(
-                          child: SingleChildScrollView(
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              cubit.userId == null
-                                                  ? 'إضافة مستخدم جديد'
-                                                  : 'تعديل بيانات المستخدم',
-                                              style: const TextStyle(
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black87,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              cubit.userId == null
-                                                  ? 'أدخل بيانات المستخدم ثم احفظه مباشرة.'
-                                                  : 'يمكنك مراجعة البيانات الحالية ثم حفظ التعديلات.',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (cubit.userId != null)
-                                        MyButton(
-                                          text: 'إلغاء التحديد',
-                                          icon: Icons.close,
-                                          variant: MyButtonVariant.ghost,
-                                          onPressed: () => _resetForm(cubit),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 18),
-                                  Container(
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      color: Colors.indigo.withValues(
-                                        alpha: 0.06,
-                                      ),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: _StatTile(
-                                            title: 'إجمالي المستخدمين',
-                                            value: cubit.users.length
-                                                .toString(),
-                                            icon: Icons.group_outlined,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: _StatTile(
-                                            title: 'المواقع',
-                                            value: cubit.locations.length
-                                                .toString(),
-                                            icon: Icons.location_on_outlined,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 18),
-                                  MyTextFeild(
-                                    controller: nameController,
-                                    labelText: "الاسم الكامل",
-                                    icon: Icons.person_outline,
-                                  ),
-                                  MyTextFeild(
-                                    controller: emailController,
-                                    labelText: "البريد الإلكتروني",
-                                    icon: Icons.email_outlined,
-                                    keyboardType: TextInputType.emailAddress,
-                                    isReadOnly: cubit.userId != null,
-                                  ),
-                                  MyTextFeild(
-                                    controller: passwordController,
-                                    labelText: cubit.userId == null
-                                        ? "كلمة المرور"
-                                        : "كلمة المرور الجديدة",
-                                    icon: Icons.lock,
-                                  ),
-                                  MyDropList(
-                                    items: ConstVar.roleList
-                                        .map((role) => role.name)
-                                        .toList(),
-                                    selectedItem: selectedRole,
-                                    hint: 'اختر الصلاحية',
-                                    onChanged: (String? value) {
-                                      setState(() {
-                                        selectedRole = value;
-                                      });
-                                    },
-                                  ),
-                                  MyDropList(
-                                    items: cubit.locations
-                                        .map((location) => location.name)
-                                        .toList(),
-                                    selectedItem: selectedLocation,
-                                    hint: 'اختر الموقع',
-                                    onChanged: (String? value) {
-                                      setState(() {
-                                        selectedLocation = value;
-                                      });
-                                    },
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: MyButton(
-                                          text: cubit.userId == null
-                                              ? "إضافة المستخدم"
-                                              : "حفظ التعديلات",
-                                          icon: cubit.userId == null
-                                              ? Icons.person_add_alt_1
-                                              : Icons.save_outlined,
-                                          expand: true,
-                                          onPressed: isBusy
-                                              ? null
-                                              : () => _submitForm(cubit),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: MyButton(
-                                          text: 'تفريغ الحقول',
-                                          icon: Icons.refresh,
-                                          variant: MyButtonVariant.secondary,
-                                          expand: true,
-                                          onPressed: isBusy
-                                              ? null
-                                              : () => _resetForm(cubit),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        flex: 3,
-                        child: MyCard(
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  const Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'قائمة المستخدمين',
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        SizedBox(height: 4),
-                                        Text(
-                                          'اضغط على أي مستخدم لعرض بياناته وتعديلها.',
-                                          style: TextStyle(
-                                            color: Colors.black54,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  MyButton(
-                                    text: 'تحديث',
-                                    icon: Icons.refresh,
-                                    variant: MyButtonVariant.ghost,
-                                    onPressed: isBusy ? null : cubit.fetchUsers,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              MyTextFeild(
-                                controller: searchController,
-                                labelText: 'ابحث بالاسم أو البريد أو الموقع',
-                                icon: Icons.search,
-                                onChanged: (_) => setState(() {}),
-                              ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  'عدد النتائج: ${filteredUsers.length}',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade700,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Expanded(
-                                child: filteredUsers.isEmpty
-                                    ? _EmptyUsersState(
-                                        hasQuery: searchController.text
-                                            .trim()
-                                            .isNotEmpty,
-                                      )
-                                    : ListView.separated(
-                                        itemCount: filteredUsers.length,
-                                        separatorBuilder: (_, __) =>
-                                            const SizedBox(height: 10),
-                                        itemBuilder: (context, index) {
-                                          final user = filteredUsers[index];
-                                          final bool isSelected =
-                                              cubit.userId == user.id;
-                                          return _UserListTile(
-                                            userName: user.name,
-                                            email: user.username ?? '',
-                                            role: _roleName(user.role),
-                                            location: _locationName(
-                                              cubit,
-                                              user.locationId,
-                                            ),
-                                            isSelected: isSelected,
-                                            onTap: () =>
-                                                _selectUser(cubit, user),
-                                          );
-                                        },
-                                      ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
+    return DashboardScaffold(
+      currentRoute: 'users',
+      title: 'إدارة المستخدمين',
+      subtitle:
+          'واجهة عربية مرتبة لإدارة الموظفين والصلاحيات وربط الحسابات بالمواقع بطريقة أوضح وأسرع.',
+      actions: <Widget>[
+        Builder(
+          builder: (BuildContext context) {
+            final UsersCubit cubit = context.read<UsersCubit>();
+            return MyButton(
+              text: 'تحديث البيانات',
+              icon: Icons.refresh_rounded,
+              variant: MyButtonVariant.secondary,
+              onPressed: cubit.fetchUsers,
+            );
+          },
         ),
+      ],
+      child: BlocConsumer<UsersCubit, UsersState>(
+        listener: (BuildContext context, UsersState state) {
+          if (state is UsersError) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
+          } else if (state is UsersActionSuccess) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
+            _resetForm(context.read<UsersCubit>());
+          }
+        },
+        builder: (BuildContext context, UsersState state) {
+          final UsersCubit cubit = context.read<UsersCubit>();
+          final bool isBusy = state is UsersLoading;
+          final List<dynamic> filteredUsers = _filteredUsers(cubit);
+
+          if (isBusy && cubit.users.isEmpty && cubit.locations.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool compact = constraints.maxWidth < 1180;
+              final Widget formPanel = _UsersFormPanel(
+                formKey: _formKey,
+                cubit: cubit,
+                isBusy: isBusy,
+                nameController: nameController,
+                emailController: emailController,
+                passwordController: passwordController,
+                selectedRole: selectedRole,
+                selectedLocation: selectedLocation,
+                onRoleChanged: (String? value) {
+                  setState(() => selectedRole = value);
+                },
+                onLocationChanged: (String? value) {
+                  setState(() => selectedLocation = value);
+                },
+                onSubmit: () => _submitForm(cubit),
+                onReset: () => _resetForm(cubit),
+              );
+              final Widget listPanel = _UsersListPanel(
+                cubit: cubit,
+                filteredUsers: filteredUsers,
+                searchController: searchController,
+                onSearchChanged: (_) => setState(() {}),
+                onSelectUser: (dynamic user) => _selectUser(cubit, user),
+                locationNameBuilder: (int locationId) =>
+                    _locationName(cubit, locationId),
+                roleNameBuilder: _roleName,
+                hasQuery: searchController.text.trim().isNotEmpty,
+              );
+
+              if (compact) {
+                return ListView(
+                  children: <Widget>[
+                    _UsersHeroCard(
+                      totalUsers: cubit.users.length,
+                      totalLocations: cubit.locations.length,
+                      selectedUser: cubit.userId == null ? 'لا يوجد' : 'نشط',
+                    ),
+                    const SizedBox(height: 22),
+                    formPanel,
+                    const SizedBox(height: 22),
+                    SizedBox(height: 700, child: listPanel),
+                  ],
+                );
+              }
+
+              return Column(
+                children: <Widget>[
+                  _UsersHeroCard(
+                    totalUsers: cubit.users.length,
+                    totalLocations: cubit.locations.length,
+                    selectedUser: cubit.userId == null ? 'لا يوجد' : 'نشط',
+                  ),
+                  const SizedBox(height: 22),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Expanded(flex: 3, child: formPanel),
+                        const SizedBox(width: 22),
+                        Expanded(flex: 4, child: listPanel),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -423,8 +252,102 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
+class _UsersHeroCard extends StatelessWidget {
+  const _UsersHeroCard({
+    required this.totalUsers,
+    required this.totalLocations,
+    required this.selectedUser,
+  });
+
+  final int totalUsers;
+  final int totalLocations;
+  final String selectedUser;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(26),
+      decoration: BoxDecoration(
+        gradient: ConstVar.brandGradient,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: ConstVar.softShadow,
+      ),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final bool compact = constraints.maxWidth < 760;
+          final List<Widget> metrics = <Widget>[
+            _HeroMetric(
+              title: 'إجمالي المستخدمين',
+              value: '$totalUsers',
+              icon: Icons.group_outlined,
+            ),
+            _HeroMetric(
+              title: 'المواقع المرتبطة',
+              value: '$totalLocations',
+              icon: Icons.location_on_outlined,
+            ),
+            _HeroMetric(
+              title: 'الحساب المحدد',
+              value: selectedUser,
+              icon: Icons.person_search_rounded,
+            ),
+          ];
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'إدارة الفريق والصلاحيات',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'إضافة موظفين جدد، متابعة المواقع، ومراجعة الحسابات المختارة ضمن تخطيط واضح ومناسب للواجهة العربية.',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.86),
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 18),
+              if (compact)
+                Column(
+                  children:
+                      metrics
+                          .expand(
+                            (Widget widget) => <Widget>[
+                              widget,
+                              const SizedBox(height: 12),
+                            ],
+                          )
+                          .toList()
+                        ..removeLast(),
+                )
+              else
+                Row(
+                  children:
+                      metrics
+                          .expand(
+                            (Widget widget) => <Widget>[
+                              Expanded(child: widget),
+                              const SizedBox(width: 12),
+                            ],
+                          )
+                          .toList()
+                        ..removeLast(),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric({
     required this.title,
     required this.value,
     required this.icon,
@@ -437,42 +360,394 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
       ),
       child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: Colors.indigo.withValues(alpha: 0.12),
-            child: Icon(icon, color: Colors.indigo),
+        children: <Widget>[
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(icon, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                MyText(
+                  title,
+                  size: 12,
+                  color: Colors.white.withValues(alpha: 0.86),
+                  fontWeight: FontWeight.w700,
+                ),
+                const SizedBox(height: 4),
+                MyText(
+                  value,
+                  size: 24,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UsersFormPanel extends StatelessWidget {
+  const _UsersFormPanel({
+    required this.formKey,
+    required this.cubit,
+    required this.isBusy,
+    required this.nameController,
+    required this.emailController,
+    required this.passwordController,
+    required this.selectedRole,
+    required this.selectedLocation,
+    required this.onRoleChanged,
+    required this.onLocationChanged,
+    required this.onSubmit,
+    required this.onReset,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final UsersCubit cubit;
+  final bool isBusy;
+  final TextEditingController nameController;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final String? selectedRole;
+  final String? selectedLocation;
+  final ValueChanged<String?> onRoleChanged;
+  final ValueChanged<String?> onLocationChanged;
+  final VoidCallback onSubmit;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return MyCard(
+      child: SingleChildScrollView(
+        child: Form(
+          key: formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        MyText(
+                          cubit.userId == null
+                              ? 'إنشاء مستخدم جديد'
+                              : 'تعديل الحساب المختار',
+                          size: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        const SizedBox(height: 6),
+                        MyText(
+                          cubit.userId == null
+                              ? 'أضف بيانات الموظف، الصلاحية، والموقع ثم احفظ مباشرة.'
+                              : 'راجع بيانات الحساب الحالي ثم احفظ التعديلات المطلوبة.',
+                          size: 14,
+                          color: ConstVar.textMuted,
+                          height: 1.5,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (cubit.userId != null)
+                    MyButton(
+                      text: 'إلغاء التحديد',
+                      icon: Icons.close_rounded,
+                      variant: MyButtonVariant.ghost,
+                      onPressed: onReset,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      ConstVar.pColor.withValues(alpha: 0.10),
+                      ConstVar.sColor.withValues(alpha: 0.12),
+                    ],
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _MiniMetric(
+                        label: 'المستخدمون',
+                        value: '${cubit.users.length}',
+                        icon: Icons.group,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _MiniMetric(
+                        label: 'المواقع',
+                        value: '${cubit.locations.length}',
+                        icon: Icons.map_outlined,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              MyTextFeild(
+                controller: nameController,
+                labelText: 'الاسم الكامل',
+                icon: Icons.person_outline_rounded,
+              ),
+              MyTextFeild(
+                controller: emailController,
+                labelText: 'البريد الإلكتروني',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                isReadOnly: cubit.userId != null,
+              ),
+              MyTextFeild(
+                controller: passwordController,
+                labelText: cubit.userId == null
+                    ? 'كلمة المرور'
+                    : 'كلمة المرور الجديدة',
+                icon: Icons.lock_outline_rounded,
+              ),
+              MyDropList(
+                items: ConstVar.roleList
+                    .map<String>((dynamic role) => role.name as String)
+                    .toList(),
+                selectedItem: selectedRole,
+                hint: 'اختر الصلاحية',
+                onChanged: onRoleChanged,
+              ),
+              MyDropList(
+                items: cubit.locations
+                    .map<String>((dynamic location) => location.name as String)
+                    .toList(),
+                selectedItem: selectedLocation,
+                hint: 'اختر الموقع',
+                onChanged: onLocationChanged,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: ConstVar.panelSoft,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: ConstVar.borderColor),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.info_outline_rounded, color: ConstVar.pColor),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: MyText(
+                        'سيتم ربط المستخدم مباشرة بالموقع المختار وتفعيل صلاحياته حسب الدور المحدد.',
+                        size: 13,
+                        color: ConstVar.textMuted,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: MyButton(
+                      text: cubit.userId == null
+                          ? 'إضافة المستخدم'
+                          : 'حفظ التعديلات',
+                      icon: cubit.userId == null
+                          ? Icons.person_add_alt_1_rounded
+                          : Icons.save_rounded,
+                      expand: true,
+                      onPressed: isBusy ? null : onSubmit,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: MyButton(
+                      text: 'تفريغ الحقول',
+                      icon: Icons.layers_clear_rounded,
+                      variant: MyButtonVariant.secondary,
+                      expand: true,
+                      onPressed: isBusy ? null : onReset,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniMetric extends StatelessWidget {
+  const _MiniMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: ConstVar.pColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: ConstVar.pColor),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+              children: <Widget>[
+                MyText(
+                  label,
+                  size: 12,
+                  color: ConstVar.textMuted,
+                  fontWeight: FontWeight.w700,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                MyText(value, size: 22, fontWeight: FontWeight.w900),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UsersListPanel extends StatelessWidget {
+  const _UsersListPanel({
+    required this.cubit,
+    required this.filteredUsers,
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.onSelectUser,
+    required this.locationNameBuilder,
+    required this.roleNameBuilder,
+    required this.hasQuery,
+  });
+
+  final UsersCubit cubit;
+  final List<dynamic> filteredUsers;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<dynamic> onSelectUser;
+  final String Function(int locationId) locationNameBuilder;
+  final String Function(String roleId) roleNameBuilder;
+  final bool hasQuery;
+
+  @override
+  Widget build(BuildContext context) {
+    return MyCard(
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    MyText(
+                      'قائمة المستخدمين',
+                      size: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                    const SizedBox(height: 6),
+                    MyText(
+                      'اختر أي مستخدم لعرض بياناته داخل النموذج وتعديلها بسرعة.',
+                      size: 14,
+                      color: ConstVar.textMuted,
+                      height: 1.45,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: ConstVar.panelSoft,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: MyText(
+                  '${filteredUsers.length} نتيجة',
+                  size: 13,
+                  fontWeight: FontWeight.w800,
+                  color: ConstVar.pColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          MyTextFeild(
+            controller: searchController,
+            labelText: 'ابحث بالاسم أو البريد أو الموقع',
+            icon: Icons.search_rounded,
+            onChanged: onSearchChanged,
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: filteredUsers.isEmpty
+                ? _EmptyUsersState(hasQuery: hasQuery)
+                : ListView.separated(
+                    itemCount: filteredUsers.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (BuildContext context, int index) {
+                      final dynamic user = filteredUsers[index];
+                      return _UserListTile(
+                        userName: user.name,
+                        email: user.username ?? '',
+                        role: roleNameBuilder(user.role),
+                        location: locationNameBuilder(user.locationId),
+                        isSelected: cubit.userId == user.id,
+                        onTap: () => onSelectUser(user),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -500,55 +775,58 @@ class _UserListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isSelected
-          ? Colors.indigo.withValues(alpha: 0.08)
-          : Colors.grey.shade50,
-      borderRadius: BorderRadius.circular(14),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(14),
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            color: isSelected
+                ? ConstVar.pColor.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isSelected
-                  ? Colors.indigo.withValues(alpha: 0.45)
-                  : Colors.grey.shade200,
+                  ? ConstVar.pColor.withValues(alpha: 0.34)
+                  : ConstVar.borderColor,
             ),
           ),
           child: Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.indigo,
-                child: Text(
-                  userName.isNotEmpty ? userName[0] : '?',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+            children: <Widget>[
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? ConstVar.brandGradient
+                      : ConstVar.accentGradient,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Center(
+                  child: Text(
+                    userName.isNotEmpty ? userName[0] : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      userName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                  children: <Widget>[
+                    MyText(userName, size: 17, fontWeight: FontWeight.w900),
                     const SizedBox(height: 4),
-                    Text(email, style: TextStyle(color: Colors.grey.shade700)),
-                    const SizedBox(height: 8),
+                    MyText(email, size: 13, color: ConstVar.textMuted),
+                    const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: [
+                      children: <Widget>[
                         _InfoChip(icon: Icons.badge_outlined, label: role),
                         _InfoChip(
                           icon: Icons.location_on_outlined,
@@ -560,9 +838,9 @@ class _UserListTile extends StatelessWidget {
                 ),
               ),
               Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey.shade500,
+                Icons.arrow_back_ios_new_rounded,
+                size: 18,
+                color: isSelected ? ConstVar.pColor : ConstVar.textMuted,
               ),
             ],
           ),
@@ -581,23 +859,22 @@ class _InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
+        color: ConstVar.panelSoft,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: ConstVar.borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.indigo),
+        children: <Widget>[
+          Icon(icon, size: 14, color: ConstVar.pColor),
           const SizedBox(width: 6),
-          Text(
+          MyText(
             label,
-            style: TextStyle(
-              color: Colors.grey.shade800,
-              fontWeight: FontWeight.w600,
-            ),
+            size: 12,
+            fontWeight: FontWeight.w700,
+            color: ConstVar.textPrimary,
           ),
         ],
       ),
@@ -615,25 +892,40 @@ class _EmptyUsersState extends StatelessWidget {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            hasQuery ? Icons.search_off : Icons.people_outline,
-            size: 64,
-            color: Colors.grey.shade400,
+        children: <Widget>[
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: ConstVar.panelSoft,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Icon(
+              hasQuery
+                  ? Icons.search_off_rounded
+                  : Icons.people_outline_rounded,
+              size: 42,
+              color: ConstVar.pColor,
+            ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            hasQuery
-                ? 'لا توجد نتائج مطابقة للبحث'
-                : 'لا يوجد مستخدمون حتى الآن',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          const SizedBox(height: 18),
+          MyText(
+            hasQuery ? 'لا توجد نتائج مطابقة' : 'لا يوجد مستخدمون حتى الآن',
+            size: 22,
+            fontWeight: FontWeight.w900,
           ),
           const SizedBox(height: 8),
-          Text(
-            hasQuery
-                ? 'جرّب تغيير كلمات البحث أو امسح حقل البحث.'
-                : 'ابدأ بإضافة أول مستخدم من النموذج الموجود على اليسار.',
-            style: TextStyle(color: Colors.grey.shade600),
+          SizedBox(
+            width: 380,
+            child: MyText(
+              hasQuery
+                  ? 'جرّب تغيير كلمات البحث أو امسح حقل البحث لإظهار جميع الحسابات.'
+                  : 'ابدأ بإضافة أول مستخدم من النموذج الموجود في هذه الصفحة.',
+              size: 14,
+              color: ConstVar.textMuted,
+              textAlign: TextAlign.center,
+              height: 1.55,
+            ),
           ),
         ],
       ),

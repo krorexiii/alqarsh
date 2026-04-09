@@ -38,9 +38,9 @@ class NotificationsCubit extends Cubit<NotificationsState> {
         type: type,
       );
       await initialize();
-      emit(NotificationsSuccess(
-        'تم إرسال الإشعار بنجاح إلى $customerCount عميل',
-      ));
+      emit(
+        NotificationsSuccess('تم إرسال الإشعار بنجاح إلى $customerCount عميل'),
+      );
     } catch (e) {
       emit(NotificationsError('فشل في إرسال الإشعار: ${e.toString()}'));
     }

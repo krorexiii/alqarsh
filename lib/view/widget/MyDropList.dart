@@ -1,9 +1,7 @@
+import 'package:alkhafajdashboard/utils/constVar.dart';
+import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
-import '../../utils/constVar.dart';
-import 'myText.dart';
 
 class MyDropList extends StatelessWidget {
   const MyDropList({
@@ -18,51 +16,32 @@ class MyDropList extends StatelessWidget {
   final List<String> items;
   final String? selectedItem;
   final String hint;
-  final Function(String?)? onChanged;
+  final ValueChanged<String?>? onChanged;
   final bool? isSearchable;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           Padding(
-            padding: const EdgeInsets.only(right: 8, bottom: 4),
+            padding: const EdgeInsets.only(bottom: 8, right: 4),
             child: MyText(
               hint,
-              fontSize: 14,
-              color: ConstVar.pColor!,
-              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: ConstVar.textMuted,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 2,
-                  blurRadius: 5,
-                  offset: Offset(0, 3), // changes position of shadow
-                ),
-              ],
-            ),
-            child: DropdownSearch<String>(
-              popupProps: PopupProps.menu(showSearchBox: isSearchable ?? false),
-              items: (filter, loadProps) {
-                return items;
-              },
-              onChanged: onChanged,
-              selectedItem: selectedItem,
-              decoratorProps: DropDownDecoratorProps(
-                decoration: InputDecoration(
-                  hintText: hint,
-                  border: OutlineInputBorder(borderSide: BorderSide.none),
-                ),
-              ),
-            ),
+          _DropDownField(
+            items: items,
+            selectedItem: selectedItem,
+            hint: hint,
+            onChanged: onChanged,
+            isSearchable: isSearchable ?? false,
+            icon: Icons.keyboard_arrow_down_rounded,
           ),
         ],
       ),
@@ -85,7 +64,7 @@ class MyDropListBorder extends StatelessWidget {
   final List<String> items;
   final String? selectedItem;
   final String hint;
-  final Function(String?)? onChanged;
+  final ValueChanged<String?>? onChanged;
   final bool? isSearchable;
   final IconData? icon;
   final bool? isFeilled;
@@ -93,53 +72,15 @@ class MyDropListBorder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8, bottom: 4),
-            child: MyText(
-              hint,
-              fontSize: 14,
-              color: ConstVar.pColor!,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          DropdownSearch<String>(
-            popupProps: PopupProps.menu(showSearchBox: isSearchable ?? false),
-            items: (filter, loadProps) {
-              return items;
-            },
-            onChanged: onChanged,
-
-            selectedItem: selectedItem,
-            decoratorProps: DropDownDecoratorProps(
-              decoration: InputDecoration(
-                hintStyle: TextStyle(
-                  color: Colors.grey[400],
-                  fontFamily: GoogleFonts.zain().fontFamily,
-                ),
-                labelStyle: TextStyle(
-                  color: Colors.grey[600],
-                  fontFamily: GoogleFonts.zain().fontFamily,
-                ),
-                prefixIcon: Icon(icon, color: ConstVar.pColor),
-                hintText: hint,
-                filled: isFeilled,
-                fillColor: Colors.white,
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: _DropDownField(
+        items: items,
+        selectedItem: selectedItem,
+        hint: hint,
+        onChanged: onChanged,
+        isSearchable: isSearchable ?? false,
+        icon: icon,
+        filled: isFeilled ?? true,
       ),
     );
   }
@@ -160,7 +101,7 @@ class MyDropListBorderSide extends StatelessWidget {
   final List<String> items;
   final String? selectedItem;
   final String hint;
-  final Function(String?)? onChanged;
+  final ValueChanged<String?>? onChanged;
   final bool? isSearchable;
   final IconData? icon;
   final bool? isFeilled;
@@ -168,43 +109,16 @@ class MyDropListBorderSide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      child: DropdownSearch<String>(
-        popupProps: PopupProps.menu(showSearchBox: isSearchable ?? false),
-        items: (filter, loadProps) {
-          return items;
-        },
-        onChanged: onChanged,
-
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: _DropDownField(
+        items: items,
         selectedItem: selectedItem,
-        decoratorProps: DropDownDecoratorProps(
-          decoration: InputDecoration(
-            isDense: true,
-            hintStyle: TextStyle(
-              color: Colors.grey[400],
-              fontFamily: GoogleFonts.zain().fontFamily,
-              fontSize: 12,
-            ),
-            labelStyle: TextStyle(
-              color: Colors.grey[600],
-              fontFamily: GoogleFonts.zain().fontFamily,
-              fontSize: 12,
-            ),
-            prefixIcon: Icon(icon, color: ConstVar.pColor, size: 18),
-            hintText: hint,
-            filled: isFeilled,
-            fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.white),
-            ),
-          ),
-        ),
+        hint: hint,
+        onChanged: onChanged,
+        isSearchable: isSearchable ?? false,
+        icon: icon,
+        filled: isFeilled ?? true,
+        dense: true,
       ),
     );
   }
@@ -223,26 +137,85 @@ class MyDropListWithOutBorder extends StatelessWidget {
   final List<String> items;
   final String? selectedItem;
   final String hint;
-  final Function(String?)? onChanged;
+  final ValueChanged<String?>? onChanged;
   final bool? isSearchable;
+
   @override
   Widget build(BuildContext context) {
+    return _DropDownField(
+      items: items,
+      selectedItem: selectedItem,
+      hint: hint,
+      onChanged: onChanged,
+      isSearchable: isSearchable ?? false,
+      borderless: true,
+    );
+  }
+}
+
+class _DropDownField extends StatelessWidget {
+  const _DropDownField({
+    required this.items,
+    required this.selectedItem,
+    required this.hint,
+    required this.onChanged,
+    required this.isSearchable,
+    this.icon,
+    this.filled = true,
+    this.dense = false,
+    this.borderless = false,
+  });
+
+  final List<String> items;
+  final String? selectedItem;
+  final String hint;
+  final ValueChanged<String?>? onChanged;
+  final bool isSearchable;
+  final IconData? icon;
+  final bool filled;
+  final bool dense;
+  final bool borderless;
+
+  @override
+  Widget build(BuildContext context) {
+    final OutlineInputBorder border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(dense ? 14 : 18),
+      borderSide: borderless
+          ? BorderSide.none
+          : const BorderSide(color: ConstVar.borderColor),
+    );
+
     return DropdownSearch<String>(
-      popupProps: PopupProps.menu(showSearchBox: isSearchable ?? false),
-      items: (filter, loadProps) {
-        return items;
-      },
+      popupProps: PopupProps.menu(
+        showSearchBox: isSearchable,
+        searchFieldProps: const TextFieldProps(
+          textDirection: TextDirection.rtl,
+        ),
+        menuProps: MenuProps(
+          backgroundColor: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+      ),
+      items: (_, __) => items,
       onChanged: onChanged,
       selectedItem: selectedItem,
       decoratorProps: DropDownDecoratorProps(
         decoration: InputDecoration(
-          hintStyle: TextStyle(
-            color: Colors.grey[400],
-            fontFamily: GoogleFonts.zain().fontFamily,
-          ),
           hintText: hint,
-          enabledBorder: OutlineInputBorder(borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(borderSide: BorderSide.none),
+          filled: filled,
+          fillColor: filled ? Colors.white : Colors.transparent,
+          prefixIcon: icon == null
+              ? null
+              : Icon(icon, color: ConstVar.pColor, size: dense ? 18 : 20),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: dense ? 12 : 16,
+          ),
+          enabledBorder: border,
+          focusedBorder: border.copyWith(
+            borderSide: const BorderSide(color: ConstVar.pColor, width: 1.4),
+          ),
+          border: border,
         ),
       ),
     );

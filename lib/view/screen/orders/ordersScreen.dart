@@ -4,8 +4,8 @@ import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:alkhafajdashboard/view/screen/orders/cubit/orders_cubit.dart';
 import 'package:alkhafajdashboard/view/screen/orders/preparation/orderPreparationScreen.dart';
 import 'package:alkhafajdashboard/view/screen/orders/widget/order_details_dialog.dart';
-import 'package:alkhafajdashboard/view/widget/dashboardDrawer.dart';
-import 'package:alkhafajdashboard/view/widget/myAppbar.dart';
+import 'package:alkhafajdashboard/view/widget/dashboard_scaffold.dart';
+import 'package:alkhafajdashboard/view/widget/myButton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -16,137 +16,150 @@ class OrdersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => OrdersCubit()..initialize(),
-      child: Scaffold(
-        drawer: const DashboardDrawer(currentRoute: 'orders'),
-        backgroundColor: const Color(0xfff0f2f5),
-        body: Directionality(
-          textDirection: TextDirection.rtl,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Builder(
-                  builder: (context) => const MyAppbar(
-                    title: 'إدارة الطلبات',
-                    isBack: false,
-                    actions: [],
+      child: DashboardScaffold(
+        currentRoute: 'orders',
+        title: 'إدارة الطلبات',
+        subtitle:
+            'لوحة متابعة احترافية للطلبات، الفرز، التحضير، التحويل، والتسليم ضمن تجربة عربية واضحة ومريحة.',
+        actions: <Widget>[
+          BlocBuilder<OrdersCubit, OrdersState>(
+            builder: (BuildContext context, OrdersState state) {
+              final OrdersCubit cubit = context.read<OrdersCubit>();
+              final bool isLoading = state is OrdersLoading;
+              return MyButton(
+                text: isLoading ? 'جاري التحديث...' : 'تحديث الطلبات',
+                icon: isLoading ? Icons.hourglass_empty : Icons.refresh_rounded,
+                variant: MyButtonVariant.secondary,
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        await cubit.refreshSilently();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text('تم تحديث الطلبات بنجاح'),
+                                ],
+                              ),
+                              backgroundColor: Colors.green.shade600,
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+              );
+            },
+          ),
+        ],
+        child: BlocConsumer<OrdersCubit, OrdersState>(
+          listener: (context, state) {
+            if (state is OrdersError || state is OrdersSuccess) {
+              final String message = state is OrdersError
+                  ? state.message
+                  : (state as OrdersSuccess).message;
+              final bool isError = state is OrdersError;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(
+                        isError
+                            ? Icons.error_outline
+                            : Icons.check_circle_outline,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(message)),
+                    ],
                   ),
+                  backgroundColor: isError
+                      ? Colors.red.shade600
+                      : Colors.green.shade600,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 6,
+                  margin: const EdgeInsets.all(16),
                 ),
+              );
+            }
+          },
+          builder: (context, state) {
+            final OrdersCubit cubit = context.read<OrdersCubit>();
+            if (state is OrdersLoading && cubit.orders.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          ConstVar.pColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'جاري تحميل الطلبات...',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final List<OrderModel> orders = cubit.visibleOrders;
+
+            return Column(
+              children: [
+                _StatsBar(cubit: cubit),
+                const SizedBox(height: 16),
+                _ToolBar(cubit: cubit),
                 const SizedBox(height: 16),
                 Expanded(
-                  child: BlocConsumer<OrdersCubit, OrdersState>(
-                    listener: (context, state) {
-                      if (state is OrdersError || state is OrdersSuccess) {
-                        final String message = state is OrdersError
-                            ? state.message
-                            : (state as OrdersSuccess).message;
-                        final bool isError = state is OrdersError;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(
-                                  isError
-                                      ? Icons.error_outline
-                                      : Icons.check_circle_outline,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(child: Text(message)),
-                              ],
-                            ),
-                            backgroundColor: isError
-                                ? Colors.red.shade600
-                                : Colors.green.shade600,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 6,
-                            margin: const EdgeInsets.all(16),
-                          ),
-                        );
-                      }
-                    },
-                    builder: (context, state) {
-                      final OrdersCubit cubit = context.read<OrdersCubit>();
-                      if (state is OrdersLoading && cubit.orders.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 60,
-                                height: 60,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    ConstVar.pColor,
-                                  ),
-                                ),
+                  child: orders.isEmpty
+                      ? const _EmptyOrdersView()
+                      : ListView.separated(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          itemCount: orders.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            return TweenAnimationBuilder<double>(
+                              duration: Duration(
+                                milliseconds: 300 + (index * 50),
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'جاري تحميل الطلبات...',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              tween: Tween(begin: 0.0, end: 1.0),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, child) {
+                                return Transform.translate(
+                                  offset: Offset(0, 20 * (1 - value)),
+                                  child: Opacity(opacity: value, child: child),
+                                );
+                              },
+                              child: _OrderCard(
+                                order: orders[index],
+                                cubit: cubit,
                               ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      final List<OrderModel> orders = cubit.visibleOrders;
-
-                      return Column(
-                        children: [
-                          _StatsBar(cubit: cubit),
-                          const SizedBox(height: 16),
-                          _ToolBar(cubit: cubit),
-                          const SizedBox(height: 16),
-                          Expanded(
-                            child: orders.isEmpty
-                                ? const _EmptyOrdersView()
-                                : ListView.separated(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    itemCount: orders.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(height: 12),
-                                    itemBuilder: (context, index) {
-                                      return TweenAnimationBuilder<double>(
-                                        duration: Duration(
-                                          milliseconds: 300 + (index * 50),
-                                        ),
-                                        tween: Tween(begin: 0.0, end: 1.0),
-                                        curve: Curves.easeOutCubic,
-                                        builder: (context, value, child) {
-                                          return Transform.translate(
-                                            offset: Offset(0, 20 * (1 - value)),
-                                            child: Opacity(
-                                              opacity: value,
-                                              child: child,
-                                            ),
-                                          );
-                                        },
-                                        child: _OrderCard(
-                                          order: orders[index],
-                                          cubit: cubit,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                            );
+                          },
+                        ),
                 ),
               ],
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -813,6 +826,19 @@ class _OrderCard extends StatelessWidget {
                         text: '${order.discountedItemsCount} مخفض',
                         gradient: [Colors.amber.shade50, Colors.amber.shade100],
                         color: Colors.amber.shade800,
+                      ),
+                    ],
+                    if (order.hasPromoDiscount) ...[
+                      const SizedBox(width: 8),
+                      _ModernInfoChip(
+                        icon: Icons.sell_rounded,
+                        text:
+                            order.discountCodeSnapshot == null ||
+                                order.discountCodeSnapshot!.isEmpty
+                            ? 'برومو'
+                            : order.discountCodeSnapshot!,
+                        gradient: [Colors.teal.shade50, Colors.teal.shade100],
+                        color: Colors.teal.shade800,
                       ),
                     ],
                     const Spacer(),

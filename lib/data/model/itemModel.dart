@@ -32,24 +32,20 @@ class ItemModel {
       categoryId: json['category_id'] as String?,
       title: json['title'] as String?,
       description: json['description'] as String?,
-      price:
-          json['price'] != null
-              ? double.tryParse(json['price'].toString())
-              : null,
-      discountPercent:
-          json['discount_percent'] != null
-              ? int.tryParse(json['discount_percent'].toString())
-              : null,
+      price: json['price'] != null
+          ? double.tryParse(json['price'].toString())
+          : null,
+      discountPercent: json['discount_percent'] != null
+          ? int.tryParse(json['discount_percent'].toString())
+          : null,
       isActive: json['is_active'] as bool?,
       isDeleted: json['is_deleted'] as bool?,
-      createdAt:
-          json['created_at'] != null
-              ? DateTime.tryParse(json['created_at'].toString())
-              : null,
-      updatedAt:
-          json['updated_at'] != null
-              ? DateTime.tryParse(json['updated_at'].toString())
-              : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString())
+          : null,
     );
   }
 

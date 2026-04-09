@@ -1,12 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:alkhafajdashboard/data/model/categoryModel.dart';
+import 'package:alkhafajdashboard/data/model/itemColorModel.dart';
 import 'package:alkhafajdashboard/data/model/itemImageModel.dart';
 import 'package:alkhafajdashboard/data/model/itemModel.dart';
+import 'package:alkhafajdashboard/data/model/itemSizeModel.dart';
 import 'package:alkhafajdashboard/data/repository.dart';
-import 'package:bloc/bloc.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 part 'items_state.dart';
 
@@ -34,6 +36,8 @@ class ItemsCubit extends Cubit<ItemsState> {
   List<ItemModel> items = [];
   List<CategoryModel> categories = [];
   List<ItemImageModel> itemImages = [];
+  List<ItemColorModel> itemColors = [];
+  List<ItemSizeModel> itemSizes = [];
 
   ItemModel? selectedItem;
   CategoryModel? selectedCategoryFilter;
@@ -49,6 +53,9 @@ class ItemsCubit extends Cubit<ItemsState> {
   final TextEditingController discountPercentController = TextEditingController(
     text: '0',
   );
+  final TextEditingController colorNameController = TextEditingController();
+  final TextEditingController colorHexController = TextEditingController();
+  final TextEditingController sizeNameController = TextEditingController();
 
   bool isActive = true;
   bool includeDeleted = false;
@@ -76,6 +83,7 @@ class ItemsCubit extends Cubit<ItemsState> {
         await selectItem(items.first, emitState: false);
       } else if (selectedItem != null) {
         await _loadSelectedItemImages();
+        await _loadSelectedItemOptions();
         _syncControllers();
       } else {
         startCreateNewItem(emitState: false);
@@ -92,6 +100,7 @@ class ItemsCubit extends Cubit<ItemsState> {
       await _fetchCategoriesInternal();
       await _fetchItemsInternal();
       await _loadSelectedItemImages();
+      await _loadSelectedItemOptions();
       _syncControllers();
       emit(ItemsLoaded());
     } catch (e) {
@@ -107,6 +116,7 @@ class ItemsCubit extends Cubit<ItemsState> {
         await selectItem(items.first, emitState: false);
       } else {
         await _loadSelectedItemImages();
+        await _loadSelectedItemOptions();
         _syncControllers();
       }
       emit(ItemsLoaded());
@@ -117,17 +127,15 @@ class ItemsCubit extends Cubit<ItemsState> {
 
   Future<void> _fetchCategoriesInternal() async {
     final List<dynamic> response = await _repository.fetchCategories();
-    categories =
-        response.map((item) {
-          final category = CategoryModel.fromJson(item as Map<String, dynamic>);
-          final String? path = category.icon;
-          return category.copyWith(
-            publicUrl:
-                path != null && path.isNotEmpty
-                    ? _repository.getCategoryImagePublicUrl(path)
-                    : null,
-          );
-        }).toList();
+    categories = response.map((item) {
+      final category = CategoryModel.fromJson(item as Map<String, dynamic>);
+      final String? path = category.icon;
+      return category.copyWith(
+        publicUrl: path != null && path.isNotEmpty
+            ? _repository.getCategoryImagePublicUrl(path)
+            : null,
+      );
+    }).toList();
 
     if (selectedCategoryId != null) {
       final int index = categories.indexWhere(
@@ -144,27 +152,28 @@ class ItemsCubit extends Cubit<ItemsState> {
       final int filterIndex = categories.indexWhere(
         (category) => category.id == selectedCategoryFilter!.id,
       );
-      selectedCategoryFilter =
-          filterIndex >= 0 ? categories[filterIndex] : null;
+      selectedCategoryFilter = filterIndex >= 0
+          ? categories[filterIndex]
+          : null;
     }
   }
 
   Future<void> _fetchItemsInternal() async {
-    final List<dynamic> response =
-        selectedCategoryFilter != null
-            ? await _repository.fetchItemsByCategory(
-              categoryId: selectedCategoryFilter!.id!,
-              includeDeleted: includeDeleted,
-            )
-            : await _repository.fetchItems(includeDeleted: includeDeleted);
+    final List<dynamic> response = selectedCategoryFilter != null
+        ? await _repository.fetchItemsByCategory(
+            categoryId: selectedCategoryFilter!.id!,
+            includeDeleted: includeDeleted,
+          )
+        : await _repository.fetchItems(includeDeleted: includeDeleted);
 
-    items =
-        response.map((item) {
-          return ItemModel.fromJson(item as Map<String, dynamic>);
-        }).toList();
+    items = response.map((item) {
+      return ItemModel.fromJson(item as Map<String, dynamic>);
+    }).toList();
 
-    final Set<int> visibleIds =
-        items.map((item) => item.id).whereType<int>().toSet();
+    final Set<int> visibleIds = items
+        .map((item) => item.id)
+        .whereType<int>()
+        .toSet();
     selectedItemIds.removeWhere((id) => !visibleIds.contains(id));
 
     if (selectedItem != null) {
@@ -176,8 +185,12 @@ class ItemsCubit extends Cubit<ItemsState> {
   Future<void> selectItem(ItemModel? item, {bool emitState = true}) async {
     selectedItem = item;
     pendingImages = [];
+    colorNameController.clear();
+    colorHexController.clear();
+    sizeNameController.clear();
     _syncControllers();
     await _loadSelectedItemImages();
+    await _loadSelectedItemOptions();
     if (emitState) {
       emit(ItemsLoaded());
     }
@@ -239,15 +252,14 @@ class ItemsCubit extends Cubit<ItemsState> {
 
     emit(ItemsSaving());
     try {
-      final List<ItemModel> targets =
-          items
-              .where(
-                (item) =>
-                    item.id != null &&
-                    selectedItemIds.contains(item.id) &&
-                    item.isDeleted != true,
-              )
-              .toList();
+      final List<ItemModel> targets = items
+          .where(
+            (item) =>
+                item.id != null &&
+                selectedItemIds.contains(item.id) &&
+                item.isDeleted != true,
+          )
+          .toList();
 
       for (final item in targets) {
         await _repository.updateItem(
@@ -311,10 +323,15 @@ class ItemsCubit extends Cubit<ItemsState> {
   void startCreateNewItem({bool emitState = true}) {
     selectedItem = null;
     itemImages = [];
+    itemColors = [];
+    itemSizes = [];
     titleController.clear();
     descriptionController.clear();
     priceController.text = '0';
     discountPercentController.text = '0';
+    colorNameController.clear();
+    colorHexController.clear();
+    sizeNameController.clear();
     selectedCategoryId = categories.isNotEmpty ? categories.first.id : null;
     pendingImages = [];
     isActive = true;
@@ -335,8 +352,9 @@ class ItemsCubit extends Cubit<ItemsState> {
         return;
       }
 
-      final pickedFiles =
-          result.files.where((file) => file.bytes != null).toList();
+      final pickedFiles = result.files
+          .where((file) => file.bytes != null)
+          .toList();
 
       if (pickedFiles.isEmpty) {
         emit(ItemsError('تعذر قراءة ملفات الصور المحددة'));
@@ -441,17 +459,16 @@ class ItemsCubit extends Cubit<ItemsState> {
           isDeleted: false,
         );
 
-        await _repository.addItem(item: item);
-        await _fetchItemsInternal();
-        final ItemModel? createdItem = items.isNotEmpty ? items.first : null;
+        final ItemModel createdItem = await _repository.addItem(item: item);
+        selectedItem = createdItem;
 
-        if (createdItem != null && pendingImages.isNotEmpty) {
-          await _uploadPendingImagesForItem(createdItem.id!);
-          selectedItem = createdItem;
-          await _loadSelectedItemImages();
+        if (createdItem.id != null) {
+          await _saveSelectedItemOptions(createdItem.id!);
+          if (pendingImages.isNotEmpty) {
+            await _uploadPendingImagesForItem(createdItem.id!);
+            await _loadSelectedItemImages();
+          }
         }
-
-        startCreateNewItem(emitState: false);
         await fetchItems();
         emit(ItemsSuccess('تم إنشاء المنتج بنجاح'));
         return;
@@ -469,8 +486,11 @@ class ItemsCubit extends Cubit<ItemsState> {
       await _repository.updateItem(item: updatedItem);
       selectedItem = updatedItem;
 
-      if (pendingImages.isNotEmpty) {
-        await _uploadPendingImagesForItem(updatedItem.id!);
+      if (updatedItem.id != null) {
+        await _saveSelectedItemOptions(updatedItem.id!);
+        if (pendingImages.isNotEmpty) {
+          await _uploadPendingImagesForItem(updatedItem.id!);
+        }
       }
 
       await fetchItems();
@@ -481,13 +501,12 @@ class ItemsCubit extends Cubit<ItemsState> {
   }
 
   Future<void> _uploadPendingImagesForItem(int itemId) async {
-    int sortOrder =
-        itemImages.isEmpty
-            ? 1
-            : (itemImages
-                    .map((image) => image.sortOrder ?? 0)
-                    .fold<int>(0, (a, b) => a > b ? a : b) +
-                1);
+    int sortOrder = itemImages.isEmpty
+        ? 1
+        : (itemImages
+                  .map((image) => image.sortOrder ?? 0)
+                  .fold<int>(0, (a, b) => a > b ? a : b) +
+              1);
 
     final bool hasExistingPrimary = itemImages.any(
       (image) => image.isPrimary == true,
@@ -505,10 +524,9 @@ class ItemsCubit extends Cubit<ItemsState> {
         itemId: itemId,
         imagePath: imagePath,
         sortOrder: sortOrder,
-        isPrimary:
-            hasExistingPrimary
-                ? pendingImage.isPrimary
-                : (index == 0 ? true : pendingImage.isPrimary),
+        isPrimary: hasExistingPrimary
+            ? pendingImage.isPrimary
+            : (index == 0 ? true : pendingImage.isPrimary),
       );
 
       await _repository.addItemImage(itemImage: itemImage);
@@ -591,25 +609,196 @@ class ItemsCubit extends Cubit<ItemsState> {
       itemId: selectedItem!.id!,
     );
 
-    itemImages =
-        response.map((item) {
-          final image = ItemImageModel.fromJson(item as Map<String, dynamic>);
-          final String? path = image.imagePath;
-          return image.copyWith(
-            publicUrl:
-                path != null && path.isNotEmpty
-                    ? _repository.getItemImagePublicUrl(path)
-                    : null,
-          );
-        }).toList();
+    itemImages = response.map((item) {
+      final image = ItemImageModel.fromJson(item as Map<String, dynamic>);
+      final String? path = image.imagePath;
+      return image.copyWith(
+        publicUrl: path != null && path.isNotEmpty
+            ? _repository.getItemImagePublicUrl(path)
+            : null,
+      );
+    }).toList();
+  }
+
+  Future<void> _loadSelectedItemOptions() async {
+    if (selectedItem?.id == null) {
+      itemColors = [];
+      itemSizes = [];
+      return;
+    }
+
+    final List<dynamic> responses = await Future.wait<dynamic>([
+      _repository.fetchItemColors(itemId: selectedItem!.id!),
+      _repository.fetchItemSizes(itemId: selectedItem!.id!),
+    ]);
+
+    itemColors = (responses[0] as List<dynamic>)
+        .map((item) => ItemColorModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+
+    itemSizes = (responses[1] as List<dynamic>)
+        .map((item) => ItemSizeModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> _saveSelectedItemOptions(int itemId) async {
+    final List<ItemColorModel> colorsToSave = itemColors
+        .asMap()
+        .entries
+        .map(
+          (entry) =>
+              entry.value.copyWith(itemId: itemId, sortOrder: entry.key + 1),
+        )
+        .toList();
+
+    final List<ItemSizeModel> sizesToSave = itemSizes
+        .asMap()
+        .entries
+        .map(
+          (entry) =>
+              entry.value.copyWith(itemId: itemId, sortOrder: entry.key + 1),
+        )
+        .toList();
+
+    await Future.wait<void>([
+      _repository.replaceItemColors(itemId: itemId, colors: colorsToSave),
+      _repository.replaceItemSizes(itemId: itemId, sizes: sizesToSave),
+    ]);
+  }
+
+  void addItemColor() {
+    final String rawName = colorNameController.text.trim();
+    final String rawHex = colorHexController.text.trim();
+    final String? normalizedHex = rawHex.isEmpty
+        ? null
+        : _normalizeHexCode(rawHex);
+
+    if (rawName.isEmpty) {
+      emit(ItemsError('أدخل اسم اللون'));
+      return;
+    }
+
+    // تحديد اسم اللون بكلمتين فقط
+    final List<String> words = rawName.split(RegExp(r'\s+'));
+    final String name = words.length <= 2 ? rawName : '${words[0]} ${words[1]}';
+
+    if (words.length > 2) {
+      emit(ItemsError('اسم اللون يجب أن يكون كلمتين كحد أقصى'));
+      return;
+    }
+
+    if (rawHex.isNotEmpty && normalizedHex == null) {
+      emit(ItemsError('كود اللون يجب أن يكون بصيغة #RRGGBB'));
+      return;
+    }
+
+    final bool exists = itemColors.any((item) {
+      final bool sameName =
+          item.name.trim().toLowerCase() == name.toLowerCase();
+      final bool sameHex =
+          normalizedHex != null &&
+          (item.hexCode ?? '').trim().toUpperCase() == normalizedHex;
+      return sameName || sameHex;
+    });
+    if (exists) {
+      emit(ItemsError('هذا اللون مضاف مسبقاً'));
+      return;
+    }
+
+    itemColors = <ItemColorModel>[
+      ...itemColors,
+      ItemColorModel(
+        name: name,
+        hexCode: normalizedHex,
+        sortOrder: itemColors.length + 1,
+      ),
+    ];
+    colorNameController.clear();
+    colorHexController.clear();
+    emit(ItemsLoaded());
+  }
+
+  void setDraftColorHex(String? value) {
+    final String normalized = value == null ? '' : value.trim().toUpperCase();
+    colorHexController.value = TextEditingValue(
+      text: normalized,
+      selection: TextSelection.collapsed(offset: normalized.length),
+    );
+    emit(ItemsLoaded());
+  }
+
+  void clearDraftColorHex() {
+    setDraftColorHex(null);
+  }
+
+  void removeItemColorAt(int index) {
+    if (index < 0 || index >= itemColors.length) {
+      return;
+    }
+
+    itemColors = itemColors
+        .asMap()
+        .entries
+        .where((entry) => entry.key != index)
+        .map((entry) => entry.value)
+        .toList();
+    emit(ItemsLoaded());
+  }
+
+  void addItemSize() {
+    final String name = sizeNameController.text.trim();
+    if (name.isEmpty) {
+      emit(ItemsError('أدخل اسم الحجم'));
+      return;
+    }
+
+    final bool exists = itemSizes.any(
+      (item) => item.name.trim().toLowerCase() == name.toLowerCase(),
+    );
+    if (exists) {
+      emit(ItemsError('هذا الحجم مضاف مسبقاً'));
+      return;
+    }
+
+    itemSizes = <ItemSizeModel>[
+      ...itemSizes,
+      ItemSizeModel(name: name, sortOrder: itemSizes.length + 1),
+    ];
+    sizeNameController.clear();
+    emit(ItemsLoaded());
+  }
+
+  void removeItemSizeAt(int index) {
+    if (index < 0 || index >= itemSizes.length) {
+      return;
+    }
+
+    itemSizes = itemSizes
+        .asMap()
+        .entries
+        .where((entry) => entry.key != index)
+        .map((entry) => entry.value)
+        .toList();
+    emit(ItemsLoaded());
+  }
+
+  String? _normalizeHexCode(String value) {
+    final String trimmed = value.trim().toUpperCase();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final String normalized = trimmed.startsWith('#') ? trimmed : '#$trimmed';
+    final bool isValid = RegExp(r'^#[0-9A-F]{6}$').hasMatch(normalized);
+    return isValid ? normalized : null;
   }
 
   void _syncControllers() {
     titleController.text = selectedItem?.title ?? '';
     descriptionController.text = selectedItem?.description ?? '';
     priceController.text = (selectedItem?.price ?? 0).toStringAsFixed(2);
-    discountPercentController.text =
-        (selectedItem?.discountPercent ?? 0).toString();
+    discountPercentController.text = (selectedItem?.discountPercent ?? 0)
+        .toString();
     selectedCategoryId = selectedItem?.categoryId ?? selectedCategoryId;
     isActive = selectedItem?.isActive ?? true;
   }
@@ -630,6 +819,9 @@ class ItemsCubit extends Cubit<ItemsState> {
     descriptionController.dispose();
     priceController.dispose();
     discountPercentController.dispose();
+    colorNameController.dispose();
+    colorHexController.dispose();
+    sizeNameController.dispose();
     return super.close();
   }
 }

@@ -1,9 +1,12 @@
 import 'package:alkhafajdashboard/data/api/supabaseApi.dart';
 import 'package:alkhafajdashboard/data/model/bannerAdsModel.dart';
 import 'package:alkhafajdashboard/data/model/categoryModel.dart';
+import 'package:alkhafajdashboard/data/model/discountCodeModel.dart';
 import 'package:alkhafajdashboard/data/model/deliveryZoneModel.dart';
+import 'package:alkhafajdashboard/data/model/itemColorModel.dart';
 import 'package:alkhafajdashboard/data/model/itemImageModel.dart';
 import 'package:alkhafajdashboard/data/model/itemModel.dart';
+import 'package:alkhafajdashboard/data/model/itemSizeModel.dart';
 import 'package:alkhafajdashboard/data/model/partItemModel.dart';
 import 'package:alkhafajdashboard/data/model/partModel.dart';
 import 'package:alkhafajdashboard/data/model/orders/order_model.dart';
@@ -133,6 +136,26 @@ class Repository {
     await supabaseApi.deleteDeliveryZone(deliveryZoneId: deliveryZoneId);
   }
 
+  Future<List<dynamic>> fetchDiscountCodes() async {
+    return await supabaseApi.fetchDiscountCodes();
+  }
+
+  Future<void> addDiscountCode({
+    required DiscountCodeModel discountCode,
+  }) async {
+    await supabaseApi.addDiscountCode(discountCode: discountCode);
+  }
+
+  Future<void> updateDiscountCode({
+    required DiscountCodeModel discountCode,
+  }) async {
+    await supabaseApi.updateDiscountCode(discountCode: discountCode);
+  }
+
+  Future<void> deleteDiscountCode({required int discountCodeId}) async {
+    await supabaseApi.deleteDiscountCode(discountCodeId: discountCodeId);
+  }
+
   Future<List<dynamic>> fetchItems({bool includeDeleted = false}) async {
     return await supabaseApi.fetchItems(includeDeleted: includeDeleted);
   }
@@ -147,8 +170,8 @@ class Repository {
     );
   }
 
-  Future<void> addItem({required ItemModel item}) async {
-    await supabaseApi.addItem(item: item);
+  Future<ItemModel> addItem({required ItemModel item}) async {
+    return await supabaseApi.addItem(item: item);
   }
 
   Future<void> updateItem({required ItemModel item}) async {
@@ -197,6 +220,28 @@ class Repository {
 
   Future<void> deleteItemImage({required ItemImageModel itemImage}) async {
     await supabaseApi.deleteItemImage(itemImage: itemImage);
+  }
+
+  Future<List<dynamic>> fetchItemColors({required int itemId}) async {
+    return await supabaseApi.fetchItemColors(itemId: itemId);
+  }
+
+  Future<List<dynamic>> fetchItemSizes({required int itemId}) async {
+    return await supabaseApi.fetchItemSizes(itemId: itemId);
+  }
+
+  Future<void> replaceItemColors({
+    required int itemId,
+    required List<ItemColorModel> colors,
+  }) async {
+    await supabaseApi.replaceItemColors(itemId: itemId, colors: colors);
+  }
+
+  Future<void> replaceItemSizes({
+    required int itemId,
+    required List<ItemSizeModel> sizes,
+  }) async {
+    await supabaseApi.replaceItemSizes(itemId: itemId, sizes: sizes);
   }
 
   Future<List<dynamic>> fetchParts() async {

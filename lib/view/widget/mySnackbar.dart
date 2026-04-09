@@ -1,3 +1,4 @@
+import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:flutter/material.dart';
 
 enum SnackbarType { success, error, info }
@@ -13,67 +14,71 @@ void showMySnackbar(
 
   switch (type) {
     case SnackbarType.success:
-      bgColor = const Color(0xff2ecc71);
+      bgColor = ConstVar.successColor;
       icon = Icons.check_circle_rounded;
+      break;
     case SnackbarType.error:
-      bgColor = const Color(0xffe74c3c);
+      bgColor = ConstVar.dangerColor;
       icon = Icons.error_rounded;
+      break;
     case SnackbarType.info:
-      bgColor = const Color(0xff3498db);
+      bgColor = ConstVar.infoColor;
       icon = Icons.info_rounded;
+      break;
   }
 
-  final snackBar = SnackBar(
-    elevation: 6,
-    backgroundColor: Colors.transparent,
-    behavior: SnackBarBehavior.floating,
-    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+  final SnackBar snackBar = SnackBar(
     duration: const Duration(seconds: 4),
     content: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: <BoxShadow>[
           BoxShadow(
-            color: bgColor.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: bgColor.withValues(alpha: 0.24),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Row(
-        children: [
+        children: <Widget>[
           Icon(icon, color: Colors.white, size: 28),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: <Widget>[
                 Text(
                   title,
+                  textDirection: TextDirection.rtl,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                    fontFamily: 'Zain',
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontFamily: 'Zain',
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          InkWell(
-            onTap: () =>
+          IconButton(
+            onPressed: () =>
                 ScaffoldMessenger.of(context).hideCurrentSnackBar(),
-            child: const Icon(Icons.close, color: Colors.white70, size: 20),
+            icon: const Icon(Icons.close_rounded, color: Colors.white70),
           ),
         ],
       ),

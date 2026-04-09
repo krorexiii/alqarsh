@@ -1,8 +1,9 @@
 import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:alkhafajdashboard/view/screen/notifications/cubit/notifications_cubit.dart';
 import 'package:alkhafajdashboard/view/screen/notifications/widget/send_notification_dialog.dart';
-import 'package:alkhafajdashboard/view/widget/dashboardDrawer.dart';
-import 'package:alkhafajdashboard/view/widget/myAppbar.dart';
+import 'package:alkhafajdashboard/view/widget/dashboard_scaffold.dart';
+import 'package:alkhafajdashboard/view/widget/myButton.dart';
+import 'package:alkhafajdashboard/view/widget/myCard.dart';
 import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,90 +15,73 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => NotificationsCubit()..initialize(),
-      child: Scaffold(
-        drawer: const DashboardDrawer(currentRoute: 'notifications'),
-        backgroundColor: const Color(0xfff6f7fb),
-        body: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Builder(
-                builder: (context) => MyAppbar(
-                  title: 'إدارة الإشعارات',
-                  isBack: false,
-                  actions: [
-                    IconButton(
-                      onPressed: () =>
-                          context.read<NotificationsCubit>().initialize(),
-                      icon: const Icon(Icons.refresh),
-                      tooltip: 'تحديث',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: BlocConsumer<NotificationsCubit, NotificationsState>(
-                  listener: (context, state) {
-                    if (state is NotificationsError ||
-                        state is NotificationsSuccess) {
-                      final String message = state is NotificationsError
-                          ? state.message
-                          : (state as NotificationsSuccess).message;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(message),
-                          backgroundColor: state is NotificationsError
-                              ? Colors.red.shade600
-                              : Colors.green.shade600,
-                        ),
-                      );
-                    }
-                  },
-                  builder: (context, state) {
-                    final NotificationsCubit cubit =
-                        context.read<NotificationsCubit>();
-
-                    if (state is NotificationsLoading &&
-                        cubit.notifications.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _NotificationsHeader(cubit: cubit),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: cubit.notifications.isEmpty
-                              ? const _EmptyView()
-                              : ListView.separated(
-                                  itemCount: cubit.notifications.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 10),
-                                  itemBuilder: (context, index) {
-                                    final n = cubit.notifications[index];
-                                    return _NotificationCard(
-                                      notification: n,
-                                      cubit: cubit,
-                                    );
-                                  },
-                                ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
+      child: DashboardScaffold(
+        currentRoute: 'notifications',
+        title: 'إدارة الإشعارات',
+        subtitle:
+            'أنشئ حملات Push للعملاء وراجع الرسائل السابقة ضمن لوحة عربية مريحة وسريعة.',
+        actions: <Widget>[
+          Builder(
+            builder: (BuildContext context) => FilledButton.icon(
+              onPressed: () => context.read<NotificationsCubit>().initialize(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('تحديث'),
+            ),
           ),
+        ],
+        child: BlocConsumer<NotificationsCubit, NotificationsState>(
+          listener: (BuildContext context, NotificationsState state) {
+            if (state is NotificationsError || state is NotificationsSuccess) {
+              final String message = state is NotificationsError
+                  ? state.message
+                  : (state as NotificationsSuccess).message;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(message),
+                  backgroundColor: state is NotificationsError
+                      ? ConstVar.dangerColor
+                      : ConstVar.successColor,
+                ),
+              );
+            }
+          },
+          builder: (BuildContext context, NotificationsState state) {
+            final NotificationsCubit cubit = context.read<NotificationsCubit>();
+
+            if (state is NotificationsLoading && cubit.notifications.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return Column(
+              children: <Widget>[
+                _NotificationsHeader(cubit: cubit),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: cubit.notifications.isEmpty
+                      ? const _EmptyView()
+                      : ListView.separated(
+                          itemCount: cubit.notifications.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (BuildContext context, int index) {
+                            final Map<String, dynamic> notification =
+                                cubit.notifications[index];
+                            return _NotificationCard(
+                              notification: notification,
+                              cubit: cubit,
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
-
-// ─── Header ──────────────────────────────────────────────────────────────────
 
 class _NotificationsHeader extends StatelessWidget {
   const _NotificationsHeader({required this.cubit});
@@ -106,85 +90,106 @@ class _NotificationsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+    return MyCard(
       child: Row(
-        children: [
+        children: <Widget>[
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
+              children: <Widget>[
+                const MyText(
                   'إرسال إشعارات Push للعملاء',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'أرسل عروض أو إعلانات لجميع عملاء التطبيق دفعة واحدة. الإشعارات تصل حتى لو التطبيق مغلق.',
-                  style: TextStyle(color: Colors.grey.shade700),
+                const SizedBox(height: 8),
+                const MyText(
+                  'أرسل عروضًا أو إعلانات عامة، وستظهر مباشرة في تطبيق العملاء.',
+                  fontSize: 15,
+                  color: ConstVar.textMuted,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: <Widget>[
+                    _InfoChip(
+                      icon: Icons.people_alt_rounded,
+                      label: 'عدد العملاء',
+                      value: '${cubit.customerCount}',
+                    ),
+                    _InfoChip(
+                      icon: Icons.notifications_active_rounded,
+                      label: 'الإشعارات الحالية',
+                      value: '${cubit.notifications.length}',
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xffeef2ff),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'عدد العملاء',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${cubit.customerCount}',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              FilledButton.icon(
-                onPressed: () async {
-                  final bool? sent = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => BlocProvider.value(
-                      value: cubit,
-                      child: const SendNotificationDialog(),
-                    ),
-                  );
-                  if (sent == true && context.mounted) {
-                    cubit.initialize();
-                  }
-                },
-                icon: const Icon(Icons.send),
-                label: const Text('إرسال إشعار جديد'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: ConstVar.pColor,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 210,
+            child: MyButton(
+              text: 'إرسال إشعار جديد',
+              icon: Icons.send_rounded,
+              expand: true,
+              onPressed: () async {
+                final bool? sent = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => BlocProvider.value(
+                    value: cubit,
+                    child: const SendNotificationDialog(),
                   ),
-                ),
+                );
+                if (sent == true && context.mounted) {
+                  cubit.initialize();
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: ConstVar.panelSoft,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: ConstVar.borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, color: ConstVar.pColor),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              MyText(
+                label,
+                fontSize: 13,
+                color: ConstVar.textFaint,
+                fontWeight: FontWeight.w700,
               ),
+              MyText(value, fontSize: 18, fontWeight: FontWeight.w900),
             ],
           ),
         ],
@@ -193,214 +198,223 @@ class _NotificationsHeader extends StatelessWidget {
   }
 }
 
-// ─── Notification Card ───────────────────────────────────────────────────────
-
 class _NotificationCard extends StatelessWidget {
-  const _NotificationCard({
-    required this.notification,
-    required this.cubit,
-  });
+  const _NotificationCard({required this.notification, required this.cubit});
 
   final Map<String, dynamic> notification;
   final NotificationsCubit cubit;
 
   @override
   Widget build(BuildContext context) {
-    final String title = notification['title'] ?? '';
-    final String body = notification['body'] ?? '';
-    final String type = notification['type'] ?? '';
-    final String createdAt = notification['created_at'] ?? '';
-    final int? id = notification['id'];
+    final String title = (notification['title'] ?? '').toString();
+    final String body = (notification['body'] ?? '').toString();
+    final String type = (notification['type'] ?? '').toString();
+    final String createdAt = (notification['created_at'] ?? '').toString();
+    final int? id = notification['id'] as int?;
     final Map<String, dynamic>? customer =
         notification['customers'] is Map<String, dynamic>
-            ? notification['customers'] as Map<String, dynamic>
-            : null;
+        ? notification['customers'] as Map<String, dynamic>
+        : null;
 
-    final IconData typeIcon;
-    final Color typeColor;
-    final String typeLabel;
+    final _NotificationMeta meta = _metaForType(type);
 
-    switch (type) {
-      case 'promotion':
-        typeIcon = Icons.local_offer;
-        typeColor = Colors.orange;
-        typeLabel = 'عرض';
-        break;
-      case 'announcement':
-        typeIcon = Icons.campaign;
-        typeColor = Colors.blue;
-        typeLabel = 'إعلان';
-        break;
-      case 'order_status':
-        typeIcon = Icons.receipt_long;
-        typeColor = Colors.green;
-        typeLabel = 'حالة طلب';
-        break;
-      default:
-        typeIcon = Icons.notifications;
-        typeColor = Colors.grey;
-        typeLabel = type;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+    return MyCard(
+      padding: const EdgeInsets.all(18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           Container(
-            width: 48,
-            height: 48,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: typeColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+              color: meta.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: Icon(typeIcon, color: typeColor, size: 26),
+            child: Icon(meta.icon, color: meta.color),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: <Widget>[
                 Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: typeColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        typeLabel,
-                        style: TextStyle(
-                          color: typeColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  children: <Widget>[
+                    Expanded(
+                      child: MyText(
+                        title.isEmpty ? 'إشعار' : title,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const Spacer(),
-                    if (customer != null)
-                      MyText(
-                        customer['name'] ?? '',
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _formatDate(createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
+                      decoration: BoxDecoration(
+                        color: meta.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: MyText(
+                        meta.label,
+                        color: meta.color,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
+                MyText(
                   body,
-                  style: TextStyle(color: Colors.grey.shade700),
+                  fontSize: 15,
+                  color: ConstVar.textMuted,
+                  height: 1.45,
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: <Widget>[
+                    _MetaBadge(
+                      icon: Icons.schedule_rounded,
+                      text: createdAt.isEmpty
+                          ? 'بدون تاريخ'
+                          : createdAt.split('T').first,
+                    ),
+                    if (customer != null && customer['name'] != null)
+                      _MetaBadge(
+                        icon: Icons.person_rounded,
+                        text: customer['name'].toString(),
+                      ),
+                    if (customer != null &&
+                        (customer['phone'] ?? '').toString().isNotEmpty)
+                      _MetaBadge(
+                        icon: Icons.phone_rounded,
+                        text: customer['phone'].toString(),
+                      ),
+                  ],
                 ),
               ],
             ),
           ),
-          if (id != null && type != 'order_status')
-            IconButton(
-              onPressed: () async {
-                final bool? confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('حذف الإشعار'),
-                    content:
-                        const Text('هل أنت متأكد من حذف هذا الإشعار؟'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('إلغاء'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                        child: const Text('حذف'),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirm == true) {
-                  cubit.deleteNotification(notificationId: id);
-                }
-              },
-              icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
-              tooltip: 'حذف',
-            ),
+          const SizedBox(width: 14),
+          MyButton(
+            text: 'حذف',
+            icon: Icons.delete_outline_rounded,
+            variant: MyButtonVariant.danger,
+            onPressed: id == null
+                ? null
+                : () => cubit.deleteNotification(notificationId: id),
+          ),
         ],
       ),
     );
   }
 
-  String _formatDate(String dateStr) {
-    try {
-      final DateTime date = DateTime.parse(dateStr);
-      return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')} '
-          '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return dateStr;
+  _NotificationMeta _metaForType(String type) {
+    switch (type) {
+      case 'promotion':
+        return const _NotificationMeta(
+          label: 'عرض',
+          icon: Icons.local_offer_rounded,
+          color: Color(0xFFE48F12),
+        );
+      case 'announcement':
+        return const _NotificationMeta(
+          label: 'إعلان',
+          icon: Icons.campaign_rounded,
+          color: ConstVar.infoColor,
+        );
+      case 'order_status':
+        return const _NotificationMeta(
+          label: 'حالة طلب',
+          icon: Icons.receipt_long_rounded,
+          color: ConstVar.successColor,
+        );
+      default:
+        return const _NotificationMeta(
+          label: 'إشعار',
+          icon: Icons.notifications_rounded,
+          color: ConstVar.textMuted,
+        );
     }
   }
 }
 
-// ─── Empty View ──────────────────────────────────────────────────────────────
+class _MetaBadge extends StatelessWidget {
+  const _MetaBadge({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ConstVar.borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 16, color: ConstVar.pColor),
+          const SizedBox(width: 6),
+          MyText(
+            text,
+            fontSize: 13,
+            color: ConstVar.textMuted,
+            fontWeight: FontWeight.w700,
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _EmptyView extends StatelessWidget {
   const _EmptyView();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.notifications_none_outlined,
-            size: 72,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'لا توجد إشعارات مرسلة بعد',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'اضغط على "إرسال إشعار جديد" لإرسال عرض أو إعلان لجميع العملاء.',
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
-        ],
+    return MyCard(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const <Widget>[
+            Icon(
+              Icons.notifications_off_rounded,
+              size: 54,
+              color: ConstVar.textFaint,
+            ),
+            SizedBox(height: 14),
+            MyText(
+              'لا توجد إشعارات مرسلة بعد',
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+            ),
+            SizedBox(height: 8),
+            MyText(
+              'ابدأ بإرسال أول إشعار للعملاء من الزر العلوي.',
+              fontSize: 15,
+              color: ConstVar.textMuted,
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+class _NotificationMeta {
+  const _NotificationMeta({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
 }

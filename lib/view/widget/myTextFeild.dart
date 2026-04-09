@@ -1,7 +1,7 @@
+import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class MyTextFeild extends StatefulWidget {
+class MyTextFeild extends StatelessWidget {
   const MyTextFeild({
     super.key,
     this.labelText,
@@ -13,55 +13,58 @@ class MyTextFeild extends StatefulWidget {
     this.onEnter,
     this.icon,
     this.isReadOnly,
+    this.maxLines = 1,
   });
+
   final String? labelText;
   final bool? obscureText;
   final TextEditingController? controller;
   final TextInputType? keyboardType;
-  final Function(String)? onChanged;
-  final Function()? onTap;
-  final Function()? onEnter;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onTap;
+  final VoidCallback? onEnter;
   final IconData? icon;
   final bool? isReadOnly;
+  final int maxLines;
 
-  @override
-  _MyTextFeildState createState() => _MyTextFeildState();
-}
-
-class _MyTextFeildState extends State<MyTextFeild> {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
-
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
-        controller: widget.controller,
-        keyboardType: widget.keyboardType,
-        obscureText: widget.obscureText ?? false,
-        readOnly: widget.isReadOnly ?? false,
-
-        onChanged: widget.onChanged,
-        onTap: widget.onTap,
-        onEditingComplete: widget.onEnter,
-
-        validator: (value) => value == null || value.isEmpty
-            ? 'يرجى إدخال ${widget.labelText}'
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: obscureText ?? false,
+        readOnly: isReadOnly ?? false,
+        maxLines: obscureText == true ? 1 : maxLines,
+        onChanged: onChanged,
+        onTap: onTap,
+        onEditingComplete: onEnter,
+        textDirection: TextDirection.rtl,
+        validator: (String? value) => value == null || value.isEmpty
+            ? 'يرجى إدخال ${labelText ?? 'هذه الخانة'}'
             : null,
         decoration: InputDecoration(
-          prefixIcon: widget.icon != null
-              ? Icon(widget.icon, color: Colors.indigo)
-              : null,
-          labelText: widget.labelText,
-          border: InputBorder.none,
-          filled: true,
-          fillColor: Colors.grey[200],
+          labelText: labelText,
+          prefixIcon: icon == null
+              ? null
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    margin: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: ConstVar.panelSoft,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(icon, color: ConstVar.pColor, size: 20),
+                  ),
+                ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 56,
+            minHeight: 56,
+          ),
         ),
       ),
     );

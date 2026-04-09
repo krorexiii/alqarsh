@@ -1,6 +1,11 @@
 import 'package:alkhafajdashboard/data/model/orders/order_model.dart';
+import 'package:alkhafajdashboard/data/model/orders/order_item_model.dart';
+import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:alkhafajdashboard/view/screen/orders/cubit/orders_cubit.dart';
-import 'package:alkhafajdashboard/view/widget/myAppbar.dart';
+import 'package:alkhafajdashboard/view/widget/dashboard_scaffold.dart';
+import 'package:alkhafajdashboard/view/widget/myButton.dart';
+import 'package:alkhafajdashboard/view/widget/myCard.dart';
+import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -13,65 +18,74 @@ class OrderPreparationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final OrdersCubit cubit = context.read<OrdersCubit>();
 
-    return Scaffold(
-      backgroundColor: const Color(0xfff6f7fb),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Builder(
-              builder:
-                  (context) => const MyAppbar(
-                    title: 'تجهيز الطلب',
-                    isBack: true,
-                    actions: [],
-                  ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: BlocConsumer<OrdersCubit, OrdersState>(
-                listener: (context, state) {
-                  if (state is OrdersSuccess) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(state.message)));
-                    Navigator.of(context).pop(true);
-                  } else if (state is OrdersError) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(state.message)));
-                  }
-                },
-                builder: (context, state) {
-                  final bool isSaving = state is OrdersSaving;
-                  final OrderModel latestOrder =
-                      cubit.orders
-                          .where((current) => current.id == order.id)
-                          .firstOrNull ??
-                      order;
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: _OrderPreparationSummary(order: latestOrder),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 2,
-                        child: _OrderPreparationActions(
-                          order: latestOrder,
-                          isSaving: isSaving,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
+    return DashboardScaffold(
+      currentRoute: 'orders',
+      title: 'تجهيز الطلب',
+      subtitle:
+          'مراجعة تفاصيل الطلب، متابعة تاريخه، وتنفيذ إجراءات الموقع ضمن صفحة أوضح وأكثر توازناً.',
+      showDrawer: false,
+      isBack: true,
+      actions: <Widget>[
+        MyButton(
+          text: 'العودة للطلبات',
+          icon: Icons.arrow_back_rounded,
+          variant: MyButtonVariant.secondary,
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
+      ],
+      child: BlocConsumer<OrdersCubit, OrdersState>(
+        listener: (context, state) {
+          if (state is OrdersSuccess) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
+            Navigator.of(context).pop(true);
+          } else if (state is OrdersError) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
+          }
+        },
+        builder: (context, state) {
+          final bool isSaving = state is OrdersSaving;
+          final OrderModel latestOrder =
+              cubit.orders
+                  .where((current) => current.id == order.id)
+                  .firstOrNull ??
+              order;
+
+          return LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool compact = constraints.maxWidth < 1080;
+              final Widget summary = _OrderPreparationSummary(
+                order: latestOrder,
+              );
+              final Widget actions = _OrderPreparationActions(
+                order: latestOrder,
+                isSaving: isSaving,
+              );
+
+              if (compact) {
+                return ListView(
+                  children: <Widget>[
+                    summary,
+                    const SizedBox(height: 18),
+                    actions,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(flex: 3, child: summary),
+                  const SizedBox(width: 18),
+                  Expanded(flex: 2, child: actions),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -84,32 +98,44 @@ class _OrderPreparationSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+    return MyCard(
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          Text(
+          MyText(
             'الطلب #${order.id} - ${order.customerName}',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            size: 24,
+            fontWeight: FontWeight.w900,
           ),
           const SizedBox(height: 8),
+          MyText(
+            'إجمالي الطلب ${order.total.toStringAsFixed(2)} مع متابعة الحالة والموقع الحالي وسجل التنفيذ.',
+            size: 14,
+            color: ConstVar.textMuted,
+            height: 1.5,
+          ),
+          const SizedBox(height: 14),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _InfoBadge(label: 'الحالة: ${order.status}'),
+              _InfoBadge(label: 'الحالة: ${_statusLabel(order.status)}'),
               _InfoBadge(
                 label: 'الموقع: ${order.assignedLocationName ?? 'غير محدد'}',
               ),
               _InfoBadge(label: 'الإجمالي: ${order.total.toStringAsFixed(2)}'),
+              if (order.hasPromoDiscount)
+                _InfoBadge(
+                  label:
+                      order.discountCodeSnapshot == null ||
+                          order.discountCodeSnapshot!.isEmpty
+                      ? 'برومو مفعّل'
+                      : 'برومو: ${order.discountCodeSnapshot}',
+                ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _OrderStatusTimeline(status: order.status),
           const SizedBox(height: 18),
           _SectionCard(
@@ -130,59 +156,131 @@ class _OrderPreparationSummary extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _SectionCard(
+            title: 'الملخص المالي',
+            child: Column(
+              children: [
+                _DataRow(
+                  title: 'المنتجات',
+                  value: order.subtotal.toStringAsFixed(2),
+                ),
+                _DataRow(
+                  title: 'التوصيل',
+                  value: order.deliveryFee == 0
+                      ? 'مجاني'
+                      : order.deliveryFee.toStringAsFixed(2),
+                ),
+                if (order.hasPromoDiscount)
+                  _DataRow(
+                    title:
+                        order.discountCodeSnapshot == null ||
+                            order.discountCodeSnapshot!.isEmpty
+                        ? 'خصم البرومو'
+                        : 'خصم البرومو (${order.discountCodeSnapshot})',
+                    value: '-${order.discountAmount.toStringAsFixed(2)}',
+                  ),
+                _DataRow(
+                  title: 'الإجمالي النهائي',
+                  value: order.total.toStringAsFixed(2),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionCard(
             title: 'عناصر الطلب',
             child: Column(
-              children:
-                  order.items
-                      .map(
-                        (item) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            item.titleSnapshot.isEmpty
-                                ? 'منتج'
-                                : item.titleSnapshot,
-                          ),
-                          subtitle: Text(
-                            item.discountPercentSnapshot > 0
-                                ? 'الكمية ${item.quantity} × ${item.unitPrice.toStringAsFixed(2)} (خصم ${item.discountPercentSnapshot}% من ${item.originalUnitPrice.toStringAsFixed(2)})'
-                                : 'الكمية ${item.quantity} × ${item.unitPrice.toStringAsFixed(2)}',
-                          ),
-                          trailing: Text(item.lineTotal.toStringAsFixed(2)),
-                        ),
-                      )
-                      .toList(),
+              children: order.items
+                  .map(
+                    (item) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        item.titleSnapshot.isEmpty
+                            ? 'منتج'
+                            : item.titleSnapshot,
+                      ),
+                      subtitle: _OrderItemSubtitle(item: item),
+                      trailing: Text(item.lineTotal.toStringAsFixed(2)),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
           const SizedBox(height: 14),
           _SectionCard(
             title: 'سجل الحالات',
             child: Column(
-              children:
-                  order.history.isEmpty
-                      ? [
-                        Text(
-                          'لا يوجد سجل حالات بعد',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      ]
-                      : order.history.map((entry) {
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.history),
-                          title: Text(entry.status),
-                          subtitle: Text(entry.notes ?? 'بدون ملاحظات'),
-                          trailing: Text(
-                            entry.createdAt == null
-                                ? ''
-                                : '${entry.createdAt!.hour.toString().padLeft(2, '0')}:${entry.createdAt!.minute.toString().padLeft(2, '0')}',
+              children: order.history.isEmpty
+                  ? [
+                      Text(
+                        'لا يوجد سجل حالات بعد',
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
+                    ]
+                  : order.history.map((entry) {
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: ConstVar.panelSoft,
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                        );
-                      }).toList(),
+                          child: Icon(
+                            Icons.history_rounded,
+                            color: ConstVar.pColor,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(_statusLabel(entry.status)),
+                        subtitle: Text(entry.notes ?? 'بدون ملاحظات'),
+                        trailing: Text(
+                          entry.createdAt == null
+                              ? ''
+                              : '${entry.createdAt!.hour.toString().padLeft(2, '0')}:${entry.createdAt!.minute.toString().padLeft(2, '0')}',
+                        ),
+                      );
+                    }).toList(),
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+class _OrderItemSubtitle extends StatelessWidget {
+  const _OrderItemSubtitle({required this.item});
+
+  final OrderItemModel item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(_itemPriceLine(item)),
+        if (item.formattedSelection.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              item.formattedSelection,
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _itemPriceLine(OrderItemModel item) {
+    if (item.discountPercentSnapshot > 0) {
+      return 'الكمية ${item.quantity} × ${item.unitPrice.toStringAsFixed(2)} '
+          '(خصم ${item.discountPercentSnapshot}% من ${item.originalUnitPrice.toStringAsFixed(2)})';
+    }
+    return 'الكمية ${item.quantity} × ${item.unitPrice.toStringAsFixed(2)}';
   }
 }
 
@@ -196,34 +294,33 @@ class _OrderPreparationActions extends StatelessWidget {
     final TextEditingController controller = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(title),
-            content: TextField(
-              controller: controller,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'اكتب السبب',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('إلغاء'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final String value = controller.text.trim();
-                  if (value.isEmpty) {
-                    return;
-                  }
-                  Navigator.of(context).pop(value);
-                },
-                child: const Text('تأكيد'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'اكتب السبب',
+            border: OutlineInputBorder(),
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final String value = controller.text.trim();
+              if (value.isEmpty) {
+                return;
+              }
+              Navigator.of(context).pop(value);
+            },
+            child: const Text('تأكيد'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -249,92 +346,87 @@ class _OrderPreparationActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final OrdersCubit cubit = context.read<OrdersCubit>();
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+    return MyCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'إجراءات الموقع',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
+          const MyText('إجراءات الموقع', size: 22, fontWeight: FontWeight.w900),
           const SizedBox(height: 8),
-          Text(
-            'من هنا يستطيع موظف الموقع بدء التجهيز أو رفض الطلب وإعادته للإدارة أو إنهاؤه.',
-            style: TextStyle(color: Colors.grey.shade700),
+          MyText(
+            'من هنا يستطيع موظف الموقع بدء التجهيز أو تحويل الطلب أو إنهاؤه مع تسجيل السبب بوضوح.',
+            size: 14,
+            color: ConstVar.textMuted,
+            height: 1.5,
           ),
           const SizedBox(height: 18),
-          FilledButton.icon(
-            onPressed:
-                isSaving || !cubit.canTransitionTo(order, 'preparing')
-                    ? null
-                    : () => _changeStatusWithReason(
-                      context,
-                      cubit,
-                      'preparing',
-                      'سبب بدء التجهيز',
-                    ),
-            icon: const Icon(Icons.kitchen_outlined),
-            label: const Text('بدء التجهيز'),
+          MyButton(
+            text: 'بدء التجهيز',
+            icon: Icons.kitchen_outlined,
+            expand: true,
+            onPressed: isSaving || !cubit.canTransitionTo(order, 'preparing')
+                ? null
+                : () => _changeStatusWithReason(
+                    context,
+                    cubit,
+                    'preparing',
+                    'سبب بدء التجهيز',
+                  ),
           ),
           const SizedBox(height: 10),
-          FilledButton.tonalIcon(
-            onPressed:
-                isSaving || !cubit.canTransitionTo(order, 'shipped')
-                    ? null
-                    : () => _changeStatusWithReason(
-                      context,
-                      cubit,
-                      'shipped',
-                      'سبب تحويل الطلب إلى الشحن',
-                    ),
-            icon: const Icon(Icons.local_shipping_outlined),
-            label: const Text('تحويل إلى الشحن'),
+          MyButton(
+            text: 'تحويل إلى الشحن',
+            icon: Icons.local_shipping_outlined,
+            variant: MyButtonVariant.secondary,
+            onPressed: isSaving || !cubit.canTransitionTo(order, 'shipped')
+                ? null
+                : () => _changeStatusWithReason(
+                    context,
+                    cubit,
+                    'shipped',
+                    'سبب تحويل الطلب إلى الشحن',
+                  ),
           ),
           const SizedBox(height: 10),
-          FilledButton.tonalIcon(
-            onPressed:
-                isSaving || !cubit.canTransitionTo(order, 'cancelled')
-                    ? null
-                    : () => _changeStatusWithReason(
-                      context,
-                      cubit,
-                      'cancelled',
-                      'سبب رفض/إلغاء الطلب',
-                    ),
-            icon: const Icon(Icons.reply_outlined),
-            label: const Text('رفض وإلغاء الطلب'),
+          MyButton(
+            text: 'رفض وإلغاء الطلب',
+            icon: Icons.reply_outlined,
+            variant: MyButtonVariant.ghost,
+            onPressed: isSaving || !cubit.canTransitionTo(order, 'cancelled')
+                ? null
+                : () => _changeStatusWithReason(
+                    context,
+                    cubit,
+                    'cancelled',
+                    'سبب رفض/إلغاء الطلب',
+                  ),
           ),
           const SizedBox(height: 10),
-          FilledButton.tonalIcon(
-            onPressed:
-                isSaving || !cubit.canTransitionTo(order, 'delivered')
-                    ? null
-                    : () => _changeStatusWithReason(
-                      context,
-                      cubit,
-                      'delivered',
-                      'سبب إنهاء الطلب',
-                    ),
-            icon: const Icon(Icons.check_circle_outline),
-            label: const Text('إنهاء الطلب'),
+          MyButton(
+            text: 'إنهاء الطلب',
+            icon: Icons.check_circle_outline,
+            variant: MyButtonVariant.secondary,
+            onPressed: isSaving || !cubit.canTransitionTo(order, 'delivered')
+                ? null
+                : () => _changeStatusWithReason(
+                    context,
+                    cubit,
+                    'delivered',
+                    'سبب إنهاء الطلب',
+                  ),
           ),
-          const Spacer(),
+          const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xfff8fafc),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade300),
+              color: ConstVar.panelSoft,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: ConstVar.borderColor),
             ),
-            child: Text(
-              'الحالة الحالية: ${order.status}\nالموقع الحالي: ${order.assignedLocationName ?? 'غير محدد'}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            child: MyText(
+              'الحالة الحالية: ${_statusLabel(order.status)}\nالموقع الحالي: ${order.assignedLocationName ?? 'غير محدد'}',
+              size: 14,
+              fontWeight: FontWeight.w700,
+              height: 1.55,
             ),
           ),
         ],
@@ -353,19 +445,16 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xfffcfcfd),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: ConstVar.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-          ),
+          MyText(title, size: 18, fontWeight: FontWeight.w900),
           const SizedBox(height: 12),
           child,
         ],
@@ -411,10 +500,16 @@ class _InfoBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xffeef2ff),
+        color: ConstVar.panelSoft,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: ConstVar.borderColor),
       ),
-      child: Text(label),
+      child: MyText(
+        label,
+        size: 12,
+        fontWeight: FontWeight.w700,
+        color: ConstVar.pColor,
+      ),
     );
   }
 }
@@ -489,20 +584,18 @@ class _OrderStatusTimeline extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color:
-                current
-                    ? Colors.indigo.withValues(alpha: 0.16)
-                    : done
-                    ? Colors.green.withValues(alpha: 0.14)
-                    : Colors.grey.shade100,
+            color: current
+                ? Colors.indigo.withValues(alpha: 0.16)
+                : done
+                ? Colors.green.withValues(alpha: 0.14)
+                : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color:
-                  current
-                      ? Colors.indigo
-                      : done
-                      ? Colors.green.shade400
-                      : Colors.grey.shade300,
+              color: current
+                  ? Colors.indigo
+                  : done
+                  ? Colors.green.shade400
+                  : Colors.grey.shade300,
             ),
           ),
           child: Row(

@@ -8,6 +8,11 @@ class OrderItemModel {
   final double unitPrice;
   final double lineTotal;
   final String titleSnapshot;
+  final int? selectedColorId;
+  final String? selectedColorName;
+  final String? selectedColorHex;
+  final int? selectedSizeId;
+  final String? selectedSizeName;
   final DateTime? createdAt;
 
   const OrderItemModel({
@@ -20,8 +25,24 @@ class OrderItemModel {
     required this.unitPrice,
     required this.lineTotal,
     required this.titleSnapshot,
+    this.selectedColorId,
+    this.selectedColorName,
+    this.selectedColorHex,
+    this.selectedSizeId,
+    this.selectedSizeName,
     this.createdAt,
   });
+
+  String get formattedSelection {
+    final List<String> parts = <String>[];
+    if ((selectedColorName ?? '').trim().isNotEmpty) {
+      parts.add('اللون: ${selectedColorName!.trim()}');
+    }
+    if ((selectedSizeName ?? '').trim().isNotEmpty) {
+      parts.add('الحجم: ${selectedSizeName!.trim()}');
+    }
+    return parts.join(' | ');
+  }
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
     return OrderItemModel(
@@ -38,10 +59,14 @@ class OrderItemModel {
       unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0,
       lineTotal: (json['line_total'] as num?)?.toDouble() ?? 0,
       titleSnapshot: (json['title_snapshot'] ?? '').toString(),
-      createdAt:
-          json['created_at'] == null
-              ? null
-              : DateTime.tryParse(json['created_at'].toString()),
+      selectedColorId: (json['selected_color_id'] as num?)?.toInt(),
+      selectedColorName: json['selected_color_name']?.toString(),
+      selectedColorHex: json['selected_color_hex']?.toString(),
+      selectedSizeId: (json['selected_size_id'] as num?)?.toInt(),
+      selectedSizeName: json['selected_size_name']?.toString(),
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.tryParse(json['created_at'].toString()),
     );
   }
 }

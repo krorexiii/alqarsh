@@ -1,6 +1,7 @@
 import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:alkhafajdashboard/view/screen/bannerAds/bannerAdsScreen.dart';
 import 'package:alkhafajdashboard/view/screen/categories/categoriesScreen.dart';
+import 'package:alkhafajdashboard/view/screen/discount_codes/discountCodesScreen.dart';
 import 'package:alkhafajdashboard/view/screen/delivery_zones/deliveryZonesScreen.dart';
 import 'package:alkhafajdashboard/view/screen/home/homeScreen.dart';
 import 'package:alkhafajdashboard/view/screen/items/itemsScreen.dart';
@@ -15,183 +16,235 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../screen/users/cubit/users_cubit.dart';
 
 class DashboardDrawer extends StatelessWidget {
-  const DashboardDrawer({super.key, required this.currentRoute});
+  const DashboardDrawer({
+    super.key,
+    required this.currentRoute,
+    this.embedded = false,
+  });
 
   final String currentRoute;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      width: 310,
-      child: Container(
-        color: const Color(0xfff6f7fb),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    ConstVar.pColor,
-                    ConstVar.pColor.withValues(alpha: 0.82),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+    final Widget content = Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
+        boxShadow: ConstVar.softShadow,
+      ),
+      child: Column(
+        children: <Widget>[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+            decoration: BoxDecoration(
+              gradient: ConstVar.brandGradient,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(34),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.dashboard_customize_outlined,
-                      color: Colors.white,
-                      size: 30,
-                    ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                  width: 66,
+                  height: 66,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  const SizedBox(height: 16),
-                  const MyText(
-                    'لوحة التحكم',
+                  child: const Icon(
+                    Icons.dashboard_customize_rounded,
                     color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                    size: 34,
                   ),
-                  const SizedBox(height: 6),
-                  MyText(
-                    'تنقل سريع ومنظم بين كل الصفحات الإدارية',
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 15,
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(14),
-                children: [
-                  _DrawerTile(
-                    title: 'الرئيسية',
-                    icon: Icons.home_outlined,
-                    isSelected: currentRoute == 'home',
-                    onTap: () => _openPage(context, 'home', const HomeScreen()),
-                  ),
-                  _DrawerTile(
-                    title: 'إدارة الطلبات',
-                    icon: Icons.receipt_long_outlined,
-                    isSelected: currentRoute == 'orders',
-                    onTap: () =>
-                        _openPage(context, 'orders', const OrdersScreen()),
-                  ),
-                  _DrawerTile(
-                    title: 'إدارة المستخدمين',
-                    icon: Icons.people_outline,
-                    isSelected: currentRoute == 'users',
-                    onTap: () {
-                      BlocProvider.of<UsersCubit>(context).fetchUsers();
-                      _openPage(context, 'users', UsersScreen());
-                    },
-                  ),
-                  _DrawerTile(
-                    title: 'إدارة الإعلانات',
-                    icon: Icons.photo_library_outlined,
-                    isSelected: currentRoute == 'banner_ads',
-                    onTap: () => _openPage(
-                      context,
-                      'banner_ads',
-                      const BannerAdsScreen(),
-                    ),
-                  ),
-                  _DrawerTile(
-                    title: 'إدارة التصنيفات',
-                    icon: Icons.category_outlined,
-                    isSelected: currentRoute == 'categories',
-                    onTap: () => _openPage(
-                      context,
-                      'categories',
-                      const CategoriesScreen(),
-                    ),
-                  ),
-                  _DrawerTile(
-                    title: 'إدارة المنتجات',
-                    icon: Icons.inventory_2_outlined,
-                    isSelected: currentRoute == 'items',
-                    onTap: () =>
-                        _openPage(context, 'items', const ItemsScreen()),
-                  ),
-                  _DrawerTile(
-                    title: 'إدارة الأقسام',
-                    icon: Icons.view_module_outlined,
-                    isSelected: currentRoute == 'parts',
-                    onTap: () =>
-                        _openPage(context, 'parts', const PartsScreen()),
-                  ),
-                  _DrawerTile(
-                    title: 'مناطق التوصيل',
-                    icon: Icons.local_shipping_outlined,
-                    isSelected: currentRoute == 'delivery_zones',
-                    onTap: () => _openPage(
-                      context,
-                      'delivery_zones',
-                      const DeliveryZonesScreen(),
-                    ),
-                  ),
-                  _DrawerTile(
-                    title: 'الإشعارات',
-                    icon: Icons.notifications_outlined,
-                    isSelected: currentRoute == 'notifications',
-                    onTap: () => _openPage(
-                      context,
-                      'notifications',
-                      const NotificationsScreen(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
+                ),
+                const SizedBox(height: 18),
+                const MyText(
+                  'لوحة إدارة الكفاح',
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: ConstVar.pColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.store_mall_directory_outlined,
-                        color: ConstVar.pColor,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: MyText(
-                        'واجهة موحدة بهوية بصرية ثابتة لكل صفحات الإدارة',
-                        fontSize: 13,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                MyText(
+                  'هوية احترافية موحّدة لإدارة المنتجات والطلبات والمحتوى من مكان واحد.',
+                  color: Colors.white.withValues(alpha: 0.92),
+                  fontSize: 15,
+                  height: 1.35,
                 ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: MyText(
+                          'تنقل سريع وتصميم متماسك لكل الواجهات',
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: <Widget>[
+                _DrawerTile(
+                  title: 'الرئيسية',
+                  subtitle: 'نظرة شاملة وسريعة',
+                  icon: Icons.home_rounded,
+                  isSelected: currentRoute == 'home',
+                  onTap: () => _openPage(context, 'home', const HomeScreen()),
+                ),
+                _DrawerTile(
+                  title: 'الطلبات',
+                  subtitle: 'مراقبة الحالة والتجهيز',
+                  icon: Icons.receipt_long_rounded,
+                  isSelected: currentRoute == 'orders',
+                  onTap: () =>
+                      _openPage(context, 'orders', const OrdersScreen()),
+                ),
+                _DrawerTile(
+                  title: 'المستخدمون',
+                  subtitle: 'إدارة الصلاحيات والمواقع',
+                  icon: Icons.people_alt_rounded,
+                  isSelected: currentRoute == 'users',
+                  onTap: () {
+                    BlocProvider.of<UsersCubit>(context).fetchUsers();
+                    _openPage(context, 'users', const UsersScreen());
+                  },
+                ),
+                _DrawerTile(
+                  title: 'الإعلانات',
+                  subtitle: 'البانرات والحملات المرئية',
+                  icon: Icons.photo_library_rounded,
+                  isSelected: currentRoute == 'banner_ads',
+                  onTap: () =>
+                      _openPage(context, 'banner_ads', const BannerAdsScreen()),
+                ),
+                _DrawerTile(
+                  title: 'التصنيفات',
+                  subtitle: 'تنظيم هيكل المتجر',
+                  icon: Icons.category_rounded,
+                  isSelected: currentRoute == 'categories',
+                  onTap: () => _openPage(
+                    context,
+                    'categories',
+                    const CategoriesScreen(),
+                  ),
+                ),
+                _DrawerTile(
+                  title: 'المنتجات',
+                  subtitle: 'إدارة المخزون والعروض',
+                  icon: Icons.inventory_2_rounded,
+                  isSelected: currentRoute == 'items',
+                  onTap: () => _openPage(context, 'items', const ItemsScreen()),
+                ),
+                _DrawerTile(
+                  title: 'الأقسام',
+                  subtitle: 'أجزاء الواجهة الرئيسية',
+                  icon: Icons.view_module_rounded,
+                  isSelected: currentRoute == 'parts',
+                  onTap: () => _openPage(context, 'parts', const PartsScreen()),
+                ),
+                _DrawerTile(
+                  title: 'أكواد الخصم',
+                  subtitle: 'إدارة البرومو كود والعروض',
+                  icon: Icons.local_offer_rounded,
+                  isSelected: currentRoute == 'discount_codes',
+                  onTap: () => _openPage(
+                    context,
+                    'discount_codes',
+                    const DiscountCodesScreen(),
+                  ),
+                ),
+                _DrawerTile(
+                  title: 'مناطق التوصيل',
+                  subtitle: 'التسعير حسب المدينة',
+                  icon: Icons.local_shipping_rounded,
+                  isSelected: currentRoute == 'delivery_zones',
+                  onTap: () => _openPage(
+                    context,
+                    'delivery_zones',
+                    const DeliveryZonesScreen(),
+                  ),
+                ),
+                _DrawerTile(
+                  title: 'الإشعارات',
+                  subtitle: 'الحملات والتنبيهات',
+                  icon: Icons.notifications_active_rounded,
+                  isSelected: currentRoute == 'notifications',
+                  onTap: () => _openPage(
+                    context,
+                    'notifications',
+                    const NotificationsScreen(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: ConstVar.panelSoft,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: ConstVar.borderColor),
+              ),
+              child: const Row(
+                children: <Widget>[
+                  Icon(Icons.verified_user_rounded, color: ConstVar.pColor),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: MyText(
+                      'واجهة عربية كاملة مع عناصر موحّدة قابلة للتوسعة.',
+                      fontSize: 14,
+                      color: ConstVar.textMuted,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+
+    if (embedded) {
+      return content;
+    }
+
+    return Drawer(
+      width: 340,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 0, 24),
+        child: content,
       ),
     );
   }
@@ -202,12 +255,16 @@ class DashboardDrawer extends StatelessWidget {
     Widget page,
   ) async {
     if (currentRoute == route) {
-      Navigator.of(context).pop();
+      if (!embedded) {
+        Navigator.of(context).pop();
+      }
       return;
     }
 
-    Navigator.of(context).pop();
-    await Future<void>.delayed(const Duration(milliseconds: 180));
+    if (!embedded) {
+      Navigator.of(context).pop();
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+    }
 
     if (!context.mounted) {
       return;
@@ -216,19 +273,21 @@ class DashboardDrawer extends StatelessWidget {
     Navigator.of(
       context,
       rootNavigator: true,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => page));
+    ).pushReplacement(MaterialPageRoute<void>(builder: (_) => page));
   }
 }
 
 class _DrawerTile extends StatelessWidget {
   const _DrawerTile({
     required this.title,
+    required this.subtitle,
     required this.icon,
     required this.isSelected,
     required this.onTap,
   });
 
   final String title;
+  final String subtitle;
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
@@ -236,55 +295,87 @@ class _DrawerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? ConstVar.sColor.withValues(alpha: 0.22)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? ConstVar.sColor : Colors.grey.shade200,
-            width: isSelected ? 1.4 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isSelected ? 0.08 : 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ListTile(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           onTap: onTap,
-          leading: Container(
-            width: 42,
-            height: 42,
+          borderRadius: BorderRadius.circular(22),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? Colors.white.withValues(alpha: 0.95)
-                  : ConstVar.pColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
+              gradient: isSelected ? ConstVar.brandGradient : null,
+              color: isSelected ? null : Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: isSelected ? Colors.transparent : ConstVar.borderColor,
+              ),
+              boxShadow: isSelected
+                  ? <BoxShadow>[
+                      BoxShadow(
+                        color: ConstVar.pColor.withValues(alpha: 0.18),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ]
+                  : <BoxShadow>[
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
             ),
-            child: Icon(
-              icon,
-              color: isSelected ? ConstVar.pColor : ConstVar.pColor,
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.18)
+                        : ConstVar.panelSoft,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isSelected ? Colors.white : ConstVar.pColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      MyText(
+                        title,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: isSelected ? Colors.white : ConstVar.textPrimary,
+                      ),
+                      const SizedBox(height: 4),
+                      MyText(
+                        subtitle,
+                        fontSize: 14,
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.84)
+                            : ConstVar.textMuted,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.9)
+                      : ConstVar.textFaint,
+                ),
+              ],
             ),
-          ),
-          title: MyText(
-            title,
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-          trailing: Icon(
-            Icons.arrow_forward_ios_rounded,
-            size: 16,
-            color: Colors.grey.shade500,
           ),
         ),
       ),
