@@ -413,9 +413,13 @@ class ItemsCubit extends Cubit<ItemsState> {
   }
 
   Future<void> saveItem() async {
+    print(
+      'Saving item with title: ${titleController.text}, price: ${priceController.text}, discount: ${discountPercentController.text}, categoryId: $selectedCategoryId, isActive: $isActive',
+    );
     final String title = titleController.text.trim();
     final String description = descriptionController.text.trim();
     final double? price = double.tryParse(priceController.text.trim());
+    print('Parsed price: ${priceController.text} -> $price');
     final int? discountPercent = int.tryParse(
       discountPercentController.text.trim().isEmpty
           ? '0'
@@ -424,16 +428,19 @@ class ItemsCubit extends Cubit<ItemsState> {
 
     if (title.isEmpty) {
       emit(ItemsError('اسم المنتج مطلوب'));
+      print('Validation failed: title is empty');
       return;
     }
 
     if (selectedCategoryId == null || selectedCategoryId!.isEmpty) {
       emit(ItemsError('اختر تصنيفاً للمنتج'));
+      print('Validation failed: no category selected');
       return;
     }
 
     if (price == null || price < 0) {
       emit(ItemsError('السعر غير صالح'));
+      print('Validation failed: invalid price');
       return;
     }
 
@@ -441,6 +448,7 @@ class ItemsCubit extends Cubit<ItemsState> {
         discountPercent < 0 ||
         discountPercent > 95) {
       emit(ItemsError('نسبة التخفيض يجب أن تكون بين 0 و 95'));
+      print('Validation failed: invalid discount percent');
       return;
     }
 
@@ -471,6 +479,7 @@ class ItemsCubit extends Cubit<ItemsState> {
         }
         await fetchItems();
         emit(ItemsSuccess('تم إنشاء المنتج بنجاح'));
+        print('Item created successfully');
         return;
       }
 
@@ -487,8 +496,14 @@ class ItemsCubit extends Cubit<ItemsState> {
       selectedItem = updatedItem;
 
       if (updatedItem.id != null) {
+        print(
+          'Item updated successfully, now saving options and images if needed',
+        );
         await _saveSelectedItemOptions(updatedItem.id!);
         if (pendingImages.isNotEmpty) {
+          print(
+            'Uploading ${pendingImages.length} pending images for item ${updatedItem.id}',
+          );
           await _uploadPendingImagesForItem(updatedItem.id!);
         }
       }
@@ -496,6 +511,7 @@ class ItemsCubit extends Cubit<ItemsState> {
       await fetchItems();
       emit(ItemsSuccess('تم تحديث المنتج بنجاح'));
     } catch (e) {
+      print('Error saving item: $e');
       emit(ItemsError('فشل في حفظ المنتج'));
     }
   }

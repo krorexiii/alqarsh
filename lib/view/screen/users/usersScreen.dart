@@ -1,4 +1,5 @@
 import 'package:alkhafajdashboard/utils/constVar.dart';
+import 'package:alkhafajdashboard/view/screen/store_locations/store_locations_screen.dart';
 import 'package:alkhafajdashboard/view/screen/users/cubit/users_cubit.dart';
 import 'package:alkhafajdashboard/view/widget/MyDropList.dart';
 import 'package:alkhafajdashboard/view/widget/dashboard_scaffold.dart';
@@ -81,7 +82,11 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
-  String _locationName(UsersCubit cubit, int locationId) {
+  String _locationName(UsersCubit cubit, int? locationId) {
+    if (locationId == null) {
+      return 'غير محدد';
+    }
+
     try {
       return cubit.locations
           .firstWhere((dynamic location) => location.id == locationId)
@@ -106,6 +111,14 @@ class _UsersScreenState extends State<UsersScreen> {
 
   void _submitForm(UsersCubit cubit) {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    if (cubit.locations.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('أضف موقع متجر واحد على الأقل قبل إنشاء المستخدم'),
+        ),
+      );
       return;
     }
     if (selectedRole == null || selectedLocation == null) {
@@ -193,7 +206,7 @@ class _UsersScreenState extends State<UsersScreen> {
                 searchController: searchController,
                 onSearchChanged: (_) => setState(() {}),
                 onSelectUser: (dynamic user) => _selectUser(cubit, user),
-                locationNameBuilder: (int locationId) =>
+                locationNameBuilder: (int? locationId) =>
                     _locationName(cubit, locationId),
                 roleNameBuilder: _roleName,
                 hasQuery: searchController.text.trim().isNotEmpty,
@@ -202,12 +215,12 @@ class _UsersScreenState extends State<UsersScreen> {
               if (compact) {
                 return ListView(
                   children: <Widget>[
-                    _UsersHeroCard(
-                      totalUsers: cubit.users.length,
-                      totalLocations: cubit.locations.length,
-                      selectedUser: cubit.userId == null ? 'لا يوجد' : 'نشط',
-                    ),
-                    const SizedBox(height: 22),
+                    // _UsersHeroCard(
+                    //   totalUsers: cubit.users.length,
+                    //   totalLocations: cubit.locations.length,
+                    //   selectedUser: cubit.userId == null ? 'لا يوجد' : 'نشط',
+                    // ),
+                    // const SizedBox(height: 22),
                     formPanel,
                     const SizedBox(height: 22),
                     SizedBox(height: 700, child: listPanel),
@@ -217,12 +230,12 @@ class _UsersScreenState extends State<UsersScreen> {
 
               return Column(
                 children: <Widget>[
-                  _UsersHeroCard(
-                    totalUsers: cubit.users.length,
-                    totalLocations: cubit.locations.length,
-                    selectedUser: cubit.userId == null ? 'لا يوجد' : 'نشط',
-                  ),
-                  const SizedBox(height: 22),
+                  // _UsersHeroCard(
+                  //   totalUsers: cubit.users.length,
+                  //   totalLocations: cubit.locations.length,
+                  //   selectedUser: cubit.userId == null ? 'لا يوجد' : 'نشط',
+                  // ),
+                  // const SizedBox(height: 22),
                   Expanded(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -544,8 +557,62 @@ class _UsersFormPanel extends StatelessWidget {
                     .toList(),
                 selectedItem: selectedLocation,
                 hint: 'اختر الموقع',
-                onChanged: onLocationChanged,
+                onChanged: cubit.locations.isEmpty ? null : onLocationChanged,
               ),
+              if (cubit.locations.isEmpty) ...<Widget>[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: ConstVar.sColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: ConstVar.sColor.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Icon(
+                            Icons.location_off_outlined,
+                            color: ConstVar.sColor,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: MyText(
+                              'لا توجد مواقع متجر متاحة حاليًا',
+                              size: 14,
+                              fontWeight: FontWeight.w800,
+                              color: ConstVar.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      MyText(
+                        'أضف موقع متجر أولًا حتى تتمكن من إسناد الحساب الجديد إلى فرع أو نقطة تجهيز محددة.',
+                        size: 13,
+                        color: ConstVar.textMuted,
+                        height: 1.5,
+                      ),
+                      const SizedBox(height: 12),
+                      MyButton(
+                        text: 'فتح مواقع المتجر',
+                        icon: Icons.storefront_rounded,
+                        variant: MyButtonVariant.secondary,
+                        onPressed: () => Navigator.of(context).pushReplacement(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const StoreLocationsScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -674,7 +741,7 @@ class _UsersListPanel extends StatelessWidget {
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<dynamic> onSelectUser;
-  final String Function(int locationId) locationNameBuilder;
+  final String Function(int? locationId) locationNameBuilder;
   final String Function(String roleId) roleNameBuilder;
   final bool hasQuery;
 

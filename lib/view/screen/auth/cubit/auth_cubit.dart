@@ -1,5 +1,6 @@
 import 'package:alkhafajdashboard/data/repository.dart';
 import 'package:alkhafajdashboard/data/model/session_user_model.dart';
+import 'package:alkhafajdashboard/utils/dashboard_auth_utils.dart';
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,19 +13,11 @@ class AuthCubit extends Cubit<AuthState> {
   String? recoveryEmail;
   bool isRecoveryOtpVerified = false;
 
-  String _normalizeEmail(String value) {
-    final String trimmed = value.trim();
-    if (trimmed.contains('@')) {
-      return trimmed;
-    }
-    return '$trimmed@k.com';
-  }
-
   Future<void> login(String username, String password) async {
     emit(AuthLoading());
     try {
       AuthResponse result = await _repository.login(
-        username: _normalizeEmail(username),
+        username: normalizeDashboardEmail(username),
         password: password,
       );
       if (result.user != null && result.session == null) {
@@ -63,19 +56,19 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> sendPasswordReset(String email) async {
     emit(AuthLoading());
     try {
-      final String normalizedEmail = _normalizeEmail(email);
+      final String normalizedEmail = normalizeDashboardEmail(email);
       recoveryEmail = normalizedEmail;
       isRecoveryOtpVerified = false;
       await _repository.resetPassword(email: normalizedEmail);
       emit(
         AuthInfo(
-          'تم إرسال رمز التحقق إلى بريدك الإلكتروني إذا كان الحساب موجوداً.',
+          'تم إرسال رمز OTP أو رابط استعادة كلمة المرور إلى بريدك الإلكتروني إذا كان الحساب موجوداً.',
         ),
       );
     } on AuthException catch (e) {
       emit(AuthError(e.message));
     } catch (_) {
-      emit(AuthError('تعذر إرسال رمز إعادة ضبط كلمة المرور حالياً'));
+      emit(AuthError('تعذر إرسال استعادة كلمة المرور حالياً'));
     }
   }
 
@@ -97,7 +90,7 @@ class AuthCubit extends Cubit<AuthState> {
     } on AuthException catch (e) {
       emit(AuthError(e.message));
     } catch (_) {
-      emit(AuthError('الرمز غير صحيح أو انتهت صلاحيته'));
+      emit(AuthError('تعذر التحقق من رمز الاستعادة حالياً'));
     }
   }
 

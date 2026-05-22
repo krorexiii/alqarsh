@@ -1,16 +1,15 @@
 # alkhafajdashboard
 
-A new Flutter project.
+لوحة تحكم Flutter مرتبطة بـ Supabase وتستخدم Firebase Cloud Messaging من خلال
+Supabase Edge Functions الآمنة.
 
-## Getting Started
+## Push Notifications
 
-This project is a starting point for a Flutter application.
+تمت إضافة بنية Push كاملة تفصل بين:
 
-A few resources to get you started if this is your first Flutter project:
+- الإشعارات العامة عبر `FCM Topics`
+- الإشعارات الفردية عبر `FCM device tokens`
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+التفاصيل الكاملة وخطوات الإعداد موجودة هنا:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- [docs/push_notifications_setup.md](docs/push_notifications_setup.md)

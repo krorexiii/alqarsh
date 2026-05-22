@@ -24,9 +24,13 @@ class UsersCubit extends Cubit<UsersState> {
   }) async {
     emit(UsersLoading());
     try {
-      final String email = username.trim();
+      if (locations.isEmpty) {
+        emit(UsersError('لا توجد مواقع متجر متاحة لربط المستخدم بها'));
+        return;
+      }
+
       UserModel user = UserModel(
-        username: email,
+        username: username.trim(),
         password: password,
         name: name,
         role: ConstVar.roleList.firstWhere((r) => r.name == role).id,
@@ -49,7 +53,7 @@ class UsersCubit extends Cubit<UsersState> {
       await fetchUsers();
       emit(
         UsersActionSuccess(
-          'تم إنشاء الموظف بنجاح، وسيصل بريد تأكيد إلى $email لتفعيل الحساب.',
+          'تم إنشاء الموظف بنجاح، ويمكنه تسجيل الدخول الآن باستخدام البيانات التي أدخلتها.',
         ),
       );
     } catch (e) {
@@ -60,17 +64,32 @@ class UsersCubit extends Cubit<UsersState> {
 
   fetchUsers() async {
     emit(UsersLoading());
+    String? failureMessage;
+
     try {
       List dataGet = await _repository.fetchUsers();
       users = dataGet.map((data) => UserModel.fromJson(data)).toList();
-
-      dataGet = await _repository.fetchLocations();
-      locations = dataGet.map((data) => LocationModel.fromJson(data)).toList();
-      emit(UsersSuccess());
     } catch (e) {
       print("Fetch users failed with error: $e");
-      emit(UsersError("فشل في جلب المستخدمين"));
+      failureMessage = "فشل في جلب المستخدمين";
     }
+
+    try {
+      List dataGet = await _repository.fetchStoreLocations();
+      locations = dataGet.map((data) => LocationModel.fromJson(data)).toList();
+    } catch (e) {
+      print("Fetch store locations failed with error: $e");
+      failureMessage = failureMessage == null
+          ? "فشل في جلب مواقع المتجر"
+          : "$failureMessage، وفشل في جلب مواقع المتجر";
+    }
+
+    if (failureMessage != null) {
+      emit(UsersError(failureMessage));
+      return;
+    }
+
+    emit(UsersSuccess());
   }
 
   selectUser(UserModel user) {

@@ -14,6 +14,8 @@ class OrderModel {
   final int? discountCodeId;
   final String? discountCodeSnapshot;
   final String? note;
+  final String deliveryType;
+  final DateTime? scheduledDeliveryDate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final double customerLat;
@@ -37,6 +39,8 @@ class OrderModel {
     required this.discountCodeId,
     required this.discountCodeSnapshot,
     required this.note,
+    required this.deliveryType,
+    required this.scheduledDeliveryDate,
     required this.createdAt,
     required this.updatedAt,
     required this.customerLat,
@@ -50,6 +54,11 @@ class OrderModel {
   });
 
   bool get isAssigned => assignedLocationId != null;
+
+  bool get isFutureDelivery => deliveryType == 'future';
+
+  DateTime? get orderingDate =>
+      isFutureDelivery ? scheduledDeliveryDate ?? createdAt : createdAt;
 
   bool get canBePrepared =>
       status == 'confirmed' || status == 'preparing' || status == 'shipped';
@@ -75,6 +84,9 @@ class OrderModel {
   }
 
   bool get isLate {
+    if (isFutureDelivery) {
+      return false;
+    }
     if (status == 'delivered' || status == 'cancelled') {
       return false;
     }
@@ -106,6 +118,10 @@ class OrderModel {
       discountCodeId: (json['discount_code_id'] as num?)?.toInt(),
       discountCodeSnapshot: json['discount_code_snapshot']?.toString(),
       note: json['note']?.toString(),
+      deliveryType: json['delivery_type'] == 'future' ? 'future' : 'current',
+      scheduledDeliveryDate: json['scheduled_delivery_date'] == null
+          ? null
+          : DateTime.tryParse(json['scheduled_delivery_date'].toString()),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.tryParse(json['created_at'].toString()),
@@ -162,6 +178,8 @@ class OrderModel {
       discountCodeId: discountCodeId,
       discountCodeSnapshot: discountCodeSnapshot,
       note: note,
+      deliveryType: deliveryType,
+      scheduledDeliveryDate: scheduledDeliveryDate,
       createdAt: createdAt,
       updatedAt: updatedAt,
       customerLat: customerLat,

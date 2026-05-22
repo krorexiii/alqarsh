@@ -34,7 +34,7 @@ class LoginScreen extends StatelessWidget {
             message: state.message,
             type: SnackbarType.info,
           );
-          if (state.message.contains('رمز التحقق')) {
+          if (state.message.contains('استعادة كلمة المرور')) {
             Get.to(() => const ResetPasswordScreen());
           }
         } else if (state is AuthSuccess) {
@@ -163,7 +163,7 @@ class LoginScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 const Text(
-                  'أدخل بريد الموظف الإلكتروني، وسيتم إرسال رمز OTP إليه لإعادة ضبط كلمة المرور داخل التطبيق.',
+                  'أدخل بريد الموظف الإلكتروني، وسيتم إرسال رمز OTP أو رابط الاستعادة إليه حسب إعدادات Supabase.',
                 ),
                 const SizedBox(height: 12),
                 MyTextFeild(

@@ -1,0 +1,371 @@
+-- Reference schema snapshot for this project.
+-- Keep this file updated whenever database tables, constraints, or relations change.
+-- This snapshot is for context/documentation and is not guaranteed to be directly executable.
+
+CREATE TABLE public.app_versions (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  platform text NOT NULL CHECK (platform = ANY (ARRAY['android'::text, 'ios'::text, 'all'::text])),
+  version text NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  update_message text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT app_versions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.banner_ads (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  image_path text NOT NULL,
+  sort_order smallint NOT NULL DEFAULT 1,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT banner_ads_pkey PRIMARY KEY (id),
+  CONSTRAINT banner_ads_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
+);
+CREATE TABLE public.cart_items (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  cart_id bigint NOT NULL,
+  item_id bigint NOT NULL,
+  quantity integer NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  selection_key text NOT NULL DEFAULT 'c:0|s:0'::text,
+  selected_color_id bigint,
+  selected_color_name text,
+  selected_color_hex text CHECK (selected_color_hex IS NULL OR selected_color_hex ~* '^#[a-f0-9]{6}$'::text),
+  selected_size_id bigint,
+  selected_size_name text,
+  CONSTRAINT cart_items_pkey PRIMARY KEY (id),
+  CONSTRAINT cart_items_cart_id_fkey FOREIGN KEY (cart_id) REFERENCES public.carts(id),
+  CONSTRAINT cart_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id),
+  CONSTRAINT cart_items_selected_color_id_fkey FOREIGN KEY (selected_color_id) REFERENCES public.item_colors(id),
+  CONSTRAINT cart_items_selected_size_id_fkey FOREIGN KEY (selected_size_id) REFERENCES public.item_sizes(id)
+);
+CREATE TABLE public.carts (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  customer_id bigint NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT carts_pkey PRIMARY KEY (id),
+  CONSTRAINT carts_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT carts_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id)
+);
+CREATE TABLE public.categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  shop_id uuid NOT NULL,
+  name text NOT NULL,
+  icon text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT categories_pkey PRIMARY KEY (id),
+  CONSTRAINT categories_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
+);
+CREATE TABLE public.customer_notifications (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  customer_id bigint,
+  type text NOT NULL DEFAULT 'order_status'::text CHECK (type = ANY (ARRAY['order_status'::text, 'promotion'::text, 'announcement'::text, 'welcome'::text])),
+  title text NOT NULL,
+  body text NOT NULL,
+  image_url text,
+  order_id bigint,
+  order_status text,
+  payload jsonb DEFAULT '{}'::jsonb,
+  is_read boolean NOT NULL DEFAULT false,
+  is_sent_fcm boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT customer_notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT customer_notifications_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT customer_notifications_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
+  CONSTRAINT customer_notifications_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+);
+CREATE TABLE public.customers (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  name text NOT NULL,
+  phone text CHECK (phone IS NULL OR length(phone) >= 7 AND length(phone) <= 20),
+  city text,
+  location text,
+  address text,
+  is_active boolean NOT NULL DEFAULT true,
+  is_banned boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  auth_user_id uuid UNIQUE,
+  CONSTRAINT customers_pkey PRIMARY KEY (id),
+  CONSTRAINT customers_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT customers_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.delivery_zones (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  city text NOT NULL,
+  price numeric NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT delivery_zones_pkey PRIMARY KEY (id),
+  CONSTRAINT delivery_zones_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
+);
+CREATE TABLE public.discount_codes (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  code text NOT NULL,
+  discount_type text NOT NULL CHECK (discount_type = ANY (ARRAY['percent'::text, 'amount'::text])),
+  discount_percent integer,
+  discount_amount numeric,
+  min_purchase_amount numeric NOT NULL DEFAULT 0 CHECK (min_purchase_amount >= 0::numeric),
+  max_discount_amount numeric CHECK (max_discount_amount IS NULL OR max_discount_amount > 0::numeric),
+  limit_count integer CHECK (limit_count IS NULL OR limit_count > 0),
+  used_count integer NOT NULL DEFAULT 0 CHECK (used_count >= 0),
+  expiry_date date NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT discount_codes_pkey PRIMARY KEY (id),
+  CONSTRAINT discount_codes_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
+);
+CREATE TABLE public.favorites (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  customer_id bigint NOT NULL,
+  item_id bigint NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT favorites_pkey PRIMARY KEY (id),
+  CONSTRAINT favorites_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT favorites_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
+  CONSTRAINT favorites_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id)
+);
+CREATE TABLE public.fcm_tokens (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  customer_id bigint NOT NULL,
+  token text NOT NULL,
+  platform text CHECK (platform = ANY (ARRAY['android'::text, 'ios'::text, 'web'::text, 'unknown'::text])),
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT fcm_tokens_pkey PRIMARY KEY (id),
+  CONSTRAINT fcm_tokens_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT fcm_tokens_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id)
+);
+CREATE TABLE public.item_colors (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  item_id bigint NOT NULL,
+  name text NOT NULL,
+  hex_code text CHECK (hex_code IS NULL OR hex_code ~* '^#[a-f0-9]{6}$'::text),
+  sort_order smallint NOT NULL DEFAULT 1 CHECK (sort_order >= 1),
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT item_colors_pkey PRIMARY KEY (id),
+  CONSTRAINT item_colors_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id)
+);
+CREATE TABLE public.item_images (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  item_id bigint NOT NULL,
+  image_path text NOT NULL,
+  sort_order smallint NOT NULL DEFAULT 1,
+  is_primary boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT item_images_pkey PRIMARY KEY (id),
+  CONSTRAINT item_images_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id)
+);
+CREATE TABLE public.item_sizes (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  item_id bigint NOT NULL,
+  name text NOT NULL,
+  sort_order smallint NOT NULL DEFAULT 1 CHECK (sort_order >= 1),
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT item_sizes_pkey PRIMARY KEY (id),
+  CONSTRAINT item_sizes_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id)
+);
+CREATE TABLE public.items (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  category_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  price numeric NOT NULL DEFAULT 0 CHECK (price >= 0::numeric),
+  is_active boolean NOT NULL DEFAULT true,
+  is_deleted boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  discount_percent smallint NOT NULL DEFAULT 0 CHECK (discount_percent >= 0 AND discount_percent <= 95),
+  discount_price numeric DEFAULT
+CASE
+    WHEN (discount_percent > 0) THEN round((price * (((100 - discount_percent))::numeric / (100)::numeric)), 2)
+    ELSE NULL::numeric
+END,
+  CONSTRAINT items_pkey PRIMARY KEY (id),
+  CONSTRAINT items_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT items_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id)
+);
+CREATE TABLE public.location (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  shop_id uuid,
+  name text,
+  l_x double precision,
+  l_y double precision,
+  location_name text,
+  updated_at timestamp with time zone DEFAULT now(),
+  customer_id bigint,
+  full_address text,
+  notes text,
+  is_default boolean DEFAULT false,
+  is_deleted boolean DEFAULT false,
+  CONSTRAINT location_pkey PRIMARY KEY (id),
+  CONSTRAINT location_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT location_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id)
+);
+CREATE TABLE public.order_items (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  order_id bigint NOT NULL,
+  item_id bigint NOT NULL,
+  quantity integer NOT NULL CHECK (quantity > 0),
+  unit_price numeric NOT NULL,
+  line_total numeric NOT NULL,
+  title_snapshot text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  original_unit_price numeric,
+  discount_percent_snapshot smallint NOT NULL DEFAULT 0 CHECK (discount_percent_snapshot >= 0 AND discount_percent_snapshot <= 95),
+  selected_color_id bigint,
+  selected_color_name text,
+  selected_color_hex text CHECK (selected_color_hex IS NULL OR selected_color_hex ~* '^#[a-f0-9]{6}$'::text),
+  selected_size_id bigint,
+  selected_size_name text,
+  CONSTRAINT order_items_pkey PRIMARY KEY (id),
+  CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id),
+  CONSTRAINT order_items_selected_color_id_fkey FOREIGN KEY (selected_color_id) REFERENCES public.item_colors(id),
+  CONSTRAINT order_items_selected_size_id_fkey FOREIGN KEY (selected_size_id) REFERENCES public.item_sizes(id)
+);
+CREATE TABLE public.order_status_history (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  order_id bigint NOT NULL,
+  status text NOT NULL,
+  changed_by uuid,
+  notes text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  location_id bigint,
+  CONSTRAINT order_status_history_pkey PRIMARY KEY (id),
+  CONSTRAINT order_status_history_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_status_history_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES auth.users(id),
+  CONSTRAINT order_status_history_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.sotre_location(id)
+);
+CREATE TABLE public.orders (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  customer_id bigint NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'preparing'::text, 'shipped'::text, 'delivered'::text, 'cancelled'::text])),
+  subtotal numeric NOT NULL DEFAULT 0,
+  delivery_fee numeric NOT NULL DEFAULT 0,
+  total numeric NOT NULL DEFAULT 0,
+  note text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  assigned_location_id bigint,
+  discount_code_id bigint,
+  discount_code_snapshot text,
+  discount_amount numeric NOT NULL DEFAULT 0,
+  CONSTRAINT orders_pkey PRIMARY KEY (id),
+  CONSTRAINT orders_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
+  CONSTRAINT orders_assigned_location_id_fkey FOREIGN KEY (assigned_location_id) REFERENCES public.location(id),
+  CONSTRAINT orders_discount_code_id_fkey FOREIGN KEY (discount_code_id) REFERENCES public.discount_codes(id)
+);
+CREATE TABLE public.part_items (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  part_id bigint NOT NULL,
+  item_id bigint NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT part_items_pkey PRIMARY KEY (id),
+  CONSTRAINT part_items_part_id_fkey FOREIGN KEY (part_id) REFERENCES public.parts(id),
+  CONSTRAINT part_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id)
+);
+CREATE TABLE public.parts (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  name text NOT NULL,
+  sort_order smallint DEFAULT 1,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT parts_pkey PRIMARY KEY (id),
+  CONSTRAINT parts_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
+);
+CREATE TABLE public.password_reset_otps (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  user_id uuid NOT NULL,
+  email text NOT NULL,
+  otp_hash text NOT NULL,
+  reset_token_hash text,
+  attempts integer NOT NULL DEFAULT 0,
+  expires_at timestamp with time zone NOT NULL,
+  reset_token_expires_at timestamp with time zone,
+  verified_at timestamp with time zone,
+  consumed_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT password_reset_otps_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.shop_users (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  role text NOT NULL DEFAULT 'staff'::text CHECK (role = ANY (ARRAY['owner'::text, 'admin'::text, 'staff'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  name text,
+  location_id bigint,
+  username text,
+  CONSTRAINT shop_users_pkey PRIMARY KEY (id),
+  CONSTRAINT shop_users_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT shop_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT shop_users_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.sotre_location(id)
+);
+CREATE TABLE public.shops (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  display_name text NOT NULL,
+  phone text,
+  address text,
+  primary_color text DEFAULT '#000000'::text CHECK (primary_color ~* '^#[a-f0-9]{6}$'::text),
+  logo_url text,
+  primary_language text NOT NULL DEFAULT 'ar'::text,
+  facebook_url text,
+  instagram_url text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT shops_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.sotre_location (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  shop_id uuid,
+  name text,
+  l_x double precision,
+  l_y double precision,
+  location_name text,
+  updated_at timestamp with time zone DEFAULT now(),
+  notes text,
+  CONSTRAINT sotre_location_pkey PRIMARY KEY (id),
+  CONSTRAINT sotre_location_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
+);
+CREATE TABLE public.whatsapp_otps (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  shop_id uuid NOT NULL,
+  customer_id bigint NOT NULL,
+  phone text NOT NULL,
+  otp text NOT NULL,
+  is_sent boolean NOT NULL DEFAULT false,
+  verified_at timestamp with time zone,
+  expires_at timestamp with time zone NOT NULL DEFAULT (now() + '00:05:00'::interval),
+  attempts integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT whatsapp_otps_pkey PRIMARY KEY (id),
+  CONSTRAINT whatsapp_otps_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT whatsapp_otps_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id)
+);

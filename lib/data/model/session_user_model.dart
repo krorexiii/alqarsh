@@ -2,7 +2,7 @@ class SessionUserModel {
   final String userId;
   final String name;
   final String role;
-  final int locationId;
+  final int? locationId;
 
   const SessionUserModel({
     required this.userId,
@@ -18,7 +18,7 @@ class SessionUserModel {
       userId: (json['user_id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
       role: (json['role'] ?? 'staff').toString(),
-      locationId: json['location_id'] as int? ?? 0,
+      locationId: json['location_id'] as int?,
     );
   }
 }

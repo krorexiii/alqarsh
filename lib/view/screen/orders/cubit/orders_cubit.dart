@@ -5,6 +5,7 @@ import 'package:alkhafajdashboard/data/model/orders/order_model.dart';
 import 'package:alkhafajdashboard/data/model/session_user_model.dart';
 import 'package:alkhafajdashboard/data/repository.dart';
 import 'package:alkhafajdashboard/utils/order_distance_helper.dart';
+import 'package:alkhafajdashboard/utils/order_notification_formatter.dart';
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 
@@ -23,6 +24,8 @@ enum OrdersFilterStatus {
 
 enum OrdersSortMode { newest, oldest, highestTotal, oldestPendingFirst }
 
+enum OrdersDeliveryTypeFilter { all, current, future }
+
 class OrdersCubit extends Cubit<OrdersState> {
   OrdersCubit({Repository? repository})
     : _repository = repository ?? Repository(),
@@ -36,6 +39,8 @@ class OrdersCubit extends Cubit<OrdersState> {
 
   OrdersFilterStatus selectedFilter = OrdersFilterStatus.all;
   OrdersSortMode selectedSortMode = OrdersSortMode.newest;
+  OrdersDeliveryTypeFilter selectedDeliveryTypeFilter =
+      OrdersDeliveryTypeFilter.all;
   String searchQuery = '';
 
   final Set<int> selectedOrderIds = <int>{};
@@ -74,7 +79,8 @@ class OrdersCubit extends Cubit<OrdersState> {
       if (isClosed) {
         return;
       }
-      final List<dynamic> locationRows = await _repository.fetchLocations();
+      final List<dynamic> locationRows = await _repository
+          .fetchStoreLocations();
       if (isClosed) {
         return;
       }
@@ -134,6 +140,12 @@ class OrdersCubit extends Cubit<OrdersState> {
     _safeEmit(OrdersLoaded());
   }
 
+  void setDeliveryTypeFilter(OrdersDeliveryTypeFilter filter) {
+    selectedDeliveryTypeFilter = filter;
+    _pruneSelectionToVisibleOrders();
+    _safeEmit(OrdersLoaded());
+  }
+
   bool isOrderSelected(OrderModel order) => selectedOrderIds.contains(order.id);
 
   void toggleOrderSelection(OrderModel order) {
@@ -183,11 +195,59 @@ class OrdersCubit extends Cubit<OrdersState> {
     return getAllowedNextStatuses(order).contains(nextStatus);
   }
 
+  int? _resolveLocationIdForStatusChange({
+    required OrderModel order,
+    required String nextStatus,
+    int? requestedLocationId,
+  }) {
+    if (nextStatus == 'pending' || nextStatus == 'cancelled') {
+      return null;
+    }
+
+    if (requestedLocationId != null && requestedLocationId > 0) {
+      return requestedLocationId;
+    }
+
+    if (order.assignedLocationId != null && order.assignedLocationId! > 0) {
+      return order.assignedLocationId;
+    }
+
+    return null;
+  }
+
+  Future<bool> _sendOrderStatusNotification({
+    required OrderModel order,
+    required String status,
+  }) async {
+    final OrderNotificationContent content = buildOrderNotificationContent(
+      order: order,
+      status: status,
+    );
+
+    try {
+      await _repository.sendNotificationToCustomer(
+        customerId: order.customerId,
+        title: content.title,
+        body: content.body,
+        type: 'order_status',
+        orderId: order.id,
+        orderStatus: status,
+        payload: content.payload,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   List<OrderModel> get visibleOrders {
     Iterable<OrderModel> scoped = orders;
 
     if (!isAdmin) {
-      final int userLocationId = currentUser?.locationId ?? 0;
+      final int? userLocationId = currentUser?.locationId;
+      if (userLocationId == null || userLocationId <= 0) {
+        return <OrderModel>[];
+      }
       scoped = scoped.where(
         (order) => order.assignedLocationId == userLocationId,
       );
@@ -200,6 +260,14 @@ class OrdersCubit extends Cubit<OrdersState> {
         final String filterStatus = selectedFilter.name;
         scoped = scoped.where((order) => order.status == filterStatus);
       }
+    }
+
+    if (selectedDeliveryTypeFilter != OrdersDeliveryTypeFilter.all) {
+      scoped = scoped.where((order) {
+        return selectedDeliveryTypeFilter == OrdersDeliveryTypeFilter.future
+            ? order.isFutureDelivery
+            : !order.isFutureDelivery;
+      });
     }
 
     if (searchQuery.isNotEmpty) {
@@ -216,15 +284,15 @@ class OrdersCubit extends Cubit<OrdersState> {
     switch (selectedSortMode) {
       case OrdersSortMode.newest:
         result.sort(
-          (a, b) => (b.createdAt ?? DateTime(1970)).compareTo(
-            a.createdAt ?? DateTime(1970),
+          (a, b) => (b.orderingDate ?? DateTime(1970)).compareTo(
+            a.orderingDate ?? DateTime(1970),
           ),
         );
         break;
       case OrdersSortMode.oldest:
         result.sort(
-          (a, b) => (a.createdAt ?? DateTime(1970)).compareTo(
-            b.createdAt ?? DateTime(1970),
+          (a, b) => (a.orderingDate ?? DateTime(1970)).compareTo(
+            b.orderingDate ?? DateTime(1970),
           ),
         );
         break;
@@ -238,8 +306,8 @@ class OrdersCubit extends Cubit<OrdersState> {
           if (aPending != bPending) {
             return aPending ? -1 : 1;
           }
-          return (a.createdAt ?? DateTime(1970)).compareTo(
-            b.createdAt ?? DateTime(1970),
+          return (a.orderingDate ?? DateTime(1970)).compareTo(
+            b.orderingDate ?? DateTime(1970),
           );
         });
         break;
@@ -300,8 +368,18 @@ class OrdersCubit extends Cubit<OrdersState> {
         changedBy: currentUser!.userId,
         notes: notes,
       );
+      final bool notificationSent = await _sendOrderStatusNotification(
+        order: order,
+        status: 'confirmed',
+      );
       await _refreshData(withLoading: false, showSuccessMessage: false);
-      _safeEmit(OrdersSuccess('تم تحويل الطلب إلى ${location.name}'));
+      _safeEmit(
+        OrdersSuccess(
+          notificationSent
+              ? 'تم تحويل الطلب إلى ${location.name}'
+              : 'تم تحويل الطلب إلى ${location.name} لكن تعذر إرسال إشعار العميل',
+        ),
+      );
     } catch (e) {
       _safeEmit(OrdersError('تعذر تحويل الطلب إلى الموقع المحدد'));
     }
@@ -327,15 +405,31 @@ class OrdersCubit extends Cubit<OrdersState> {
 
     _safeEmit(OrdersSaving());
     try {
+      final int? resolvedLocationId = _resolveLocationIdForStatusChange(
+        order: order,
+        nextStatus: status,
+        requestedLocationId: locationId,
+      );
+
       await _repository.updateOrderStatus(
         orderId: order.id,
         status: status,
         changedBy: currentUser!.userId,
         notes: notes,
-        locationId: locationId,
+        locationId: resolvedLocationId,
+      );
+      final bool notificationSent = await _sendOrderStatusNotification(
+        order: order,
+        status: status,
       );
       await _refreshData(withLoading: false, showSuccessMessage: false);
-      _safeEmit(OrdersSuccess('تم تحديث حالة الطلب بنجاح'));
+      _safeEmit(
+        OrdersSuccess(
+          notificationSent
+              ? 'تم تحديث حالة الطلب بنجاح'
+              : 'تم تحديث حالة الطلب لكن تعذر إرسال إشعار العميل',
+        ),
+      );
     } catch (e) {
       _safeEmit(OrdersError('تعذر تحديث حالة الطلب'));
     }
@@ -361,6 +455,7 @@ class OrdersCubit extends Cubit<OrdersState> {
 
     _safeEmit(OrdersSaving());
     try {
+      int notificationFailures = 0;
       for (final order in targets) {
         await _repository.assignOrderToLocation(
           orderId: order.id,
@@ -368,10 +463,21 @@ class OrdersCubit extends Cubit<OrdersState> {
           changedBy: currentUser!.userId,
           notes: notes,
         );
+        final bool notificationSent = await _sendOrderStatusNotification(
+          order: order,
+          status: 'confirmed',
+        );
+        if (!notificationSent) {
+          notificationFailures++;
+        }
       }
       await _refreshData(withLoading: false, showSuccessMessage: false);
       _safeEmit(
-        OrdersSuccess('تم تحويل ${targets.length} طلب إلى ${location.name}'),
+        OrdersSuccess(
+          notificationFailures == 0
+              ? 'تم تحويل ${targets.length} طلب إلى ${location.name}'
+              : 'تم تحويل ${targets.length} طلب إلى ${location.name} مع فشل $notificationFailures إشعار',
+        ),
       );
     } catch (_) {
       _safeEmit(OrdersError('فشل التحويل الجماعي للطلبات'));
@@ -395,17 +501,37 @@ class OrdersCubit extends Cubit<OrdersState> {
 
     _safeEmit(OrdersSaving());
     try {
+      int notificationFailures = 0;
       for (final order in targets) {
+        final int? resolvedLocationId = _resolveLocationIdForStatusChange(
+          order: order,
+          nextStatus: status,
+          requestedLocationId: currentUser?.locationId,
+        );
+
         await _repository.updateOrderStatus(
           orderId: order.id,
           status: status,
           changedBy: currentUser!.userId,
           notes: notes,
-          locationId: currentUser?.locationId,
+          locationId: resolvedLocationId,
         );
+        final bool notificationSent = await _sendOrderStatusNotification(
+          order: order,
+          status: status,
+        );
+        if (!notificationSent) {
+          notificationFailures++;
+        }
       }
       await _refreshData(withLoading: false, showSuccessMessage: false);
-      _safeEmit(OrdersSuccess('تم تحديث ${targets.length} طلب'));
+      _safeEmit(
+        OrdersSuccess(
+          notificationFailures == 0
+              ? 'تم تحديث ${targets.length} طلب'
+              : 'تم تحديث ${targets.length} طلب مع فشل $notificationFailures إشعار',
+        ),
+      );
     } catch (_) {
       _safeEmit(OrdersError('فشل التحديث الجماعي للحالات'));
     }

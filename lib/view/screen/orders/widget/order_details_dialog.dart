@@ -1,6 +1,7 @@
 import 'package:alkhafajdashboard/data/model/orders/order_item_model.dart';
 import 'package:alkhafajdashboard/data/model/orders/order_model.dart';
 import 'package:alkhafajdashboard/utils/constVar.dart';
+import 'package:alkhafajdashboard/utils/order_delivery_type_helper.dart';
 import 'package:alkhafajdashboard/view/widget/myButton.dart';
 import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:flutter/material.dart';
@@ -89,6 +90,15 @@ class OrderDetailsDialog extends StatelessWidget {
                           value: _statusLabel(order.status),
                         ),
                         _HeaderBadge(
+                          label: 'نوع الطلب',
+                          value: orderDeliveryTypeLabel(order),
+                        ),
+                        if (order.isFutureDelivery)
+                          _HeaderBadge(
+                            label: 'يوم الطلب',
+                            value: formatOrderDate(order.scheduledDeliveryDate),
+                          ),
+                        _HeaderBadge(
                           label: 'الموقع',
                           value: order.assignedLocationName ?? 'غير محدد',
                         ),
@@ -132,6 +142,17 @@ class OrderDetailsDialog extends StatelessWidget {
                               title: 'الموقع الحالي',
                               value: order.assignedLocationName ?? 'غير محدد',
                             ),
+                            _InfoRow(
+                              title: 'نوع الطلب',
+                              value: orderDeliveryTypeLabel(order),
+                            ),
+                            if (order.isFutureDelivery)
+                              _InfoRow(
+                                title: 'يوم الطلب',
+                                value: formatOrderDate(
+                                  order.scheduledDeliveryDate,
+                                ),
+                              ),
                             _InfoRow(
                               title: 'إحداثيات العميل',
                               value:

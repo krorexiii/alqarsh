@@ -40,8 +40,42 @@ class Repository {
     return await supabaseApi.fetchCurrentSessionUser();
   }
 
-  fetchLocations() async {
-    return await supabaseApi.fetchLocations();
+  Future<List<dynamic>> fetchStoreLocations() async {
+    return await supabaseApi.fetchStoreLocations();
+  }
+
+  Future<void> addStoreLocation({
+    required String name,
+    required String locationName,
+    required double lX,
+    required double lY,
+  }) async {
+    await supabaseApi.addStoreLocation(
+      name: name,
+      locationName: locationName,
+      lX: lX,
+      lY: lY,
+    );
+  }
+
+  Future<void> updateStoreLocation({
+    required int id,
+    required String name,
+    required String locationName,
+    required double lX,
+    required double lY,
+  }) async {
+    await supabaseApi.updateStoreLocation(
+      id: id,
+      name: name,
+      locationName: locationName,
+      lX: lX,
+      lY: lY,
+    );
+  }
+
+  Future<void> deleteStoreLocation({required int id}) async {
+    await supabaseApi.deleteStoreLocation(id: id);
   }
 
   fetchUsers() async {
@@ -323,31 +357,43 @@ class Repository {
     return await supabaseApi.fetchNotifications();
   }
 
-  Future<void> sendBroadcastNotification({
+  Future<List<Map<String, dynamic>>> fetchNotificationCustomers() async {
+    return await supabaseApi.fetchNotificationCustomers();
+  }
+
+  Future<Map<String, dynamic>> sendBroadcastNotification({
     required String title,
     required String body,
     required String type,
+    Map<String, dynamic>? payload,
   }) async {
-    await supabaseApi.sendBroadcastNotification(
+    return await supabaseApi.sendBroadcastNotification(
       title: title,
       body: body,
       type: type,
+      payload: payload,
     );
   }
 
-  Future<void> sendNotificationToCustomer({
+  Future<Map<String, dynamic>> sendNotificationToCustomer({
     required int customerId,
     required String title,
     required String body,
     required String type,
     int? orderId,
+    String? orderStatus,
+    Map<String, dynamic>? payload,
+    String? imageUrl,
   }) async {
-    await supabaseApi.sendNotificationToCustomer(
+    return await supabaseApi.sendNotificationToCustomer(
       customerId: customerId,
       title: title,
       body: body,
       type: type,
       orderId: orderId,
+      orderStatus: orderStatus,
+      payload: payload,
+      imageUrl: imageUrl,
     );
   }
 

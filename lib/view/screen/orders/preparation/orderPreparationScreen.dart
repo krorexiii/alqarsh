@@ -1,6 +1,7 @@
 import 'package:alkhafajdashboard/data/model/orders/order_model.dart';
 import 'package:alkhafajdashboard/data/model/orders/order_item_model.dart';
 import 'package:alkhafajdashboard/utils/constVar.dart';
+import 'package:alkhafajdashboard/utils/order_delivery_type_helper.dart';
 import 'package:alkhafajdashboard/view/screen/orders/cubit/orders_cubit.dart';
 import 'package:alkhafajdashboard/view/widget/dashboard_scaffold.dart';
 import 'package:alkhafajdashboard/view/widget/myButton.dart';
@@ -121,6 +122,12 @@ class _OrderPreparationSummary extends StatelessWidget {
             runSpacing: 8,
             children: [
               _InfoBadge(label: 'الحالة: ${_statusLabel(order.status)}'),
+              _InfoBadge(label: 'نوع الطلب: ${orderDeliveryTypeLabel(order)}'),
+              if (order.isFutureDelivery)
+                _InfoBadge(
+                  label:
+                      'يوم الطلب: ${formatOrderDate(order.scheduledDeliveryDate)}',
+                ),
               _InfoBadge(
                 label: 'الموقع: ${order.assignedLocationName ?? 'غير محدد'}',
               ),
@@ -144,6 +151,15 @@ class _OrderPreparationSummary extends StatelessWidget {
               children: [
                 _DataRow(title: 'الاسم', value: order.customerName),
                 _DataRow(title: 'الهاتف', value: order.customerPhone),
+                _DataRow(
+                  title: 'نوع الطلب',
+                  value: orderDeliveryTypeLabel(order),
+                ),
+                if (order.isFutureDelivery)
+                  _DataRow(
+                    title: 'يوم الطلب',
+                    value: formatOrderDate(order.scheduledDeliveryDate),
+                  ),
                 _DataRow(
                   title: 'الإحداثيات',
                   value:
@@ -338,7 +354,7 @@ class _OrderPreparationActions extends StatelessWidget {
       order: order,
       status: status,
       notes: reason,
-      locationId: cubit.currentUser?.locationId,
+      locationId: order.assignedLocationId,
     );
   }
 

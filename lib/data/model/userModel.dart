@@ -4,7 +4,7 @@ class UserModel {
   final String? password;
   final String name;
   final String role;
-  final int locationId;
+  final int? locationId;
 
   UserModel({
     required this.id,
@@ -17,11 +17,11 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['user_id'],
-      username: json['username'],
-      name: json['name'],
-      role: json['role'],
-      locationId: json['location_id'],
+      id: (json['user_id'] ?? '').toString(),
+      username: json['username']?.toString(),
+      name: (json['name'] ?? '').toString(),
+      role: (json['role'] ?? '').toString(),
+      locationId: (json['location_id'] as num?)?.toInt(),
     );
   }
 }

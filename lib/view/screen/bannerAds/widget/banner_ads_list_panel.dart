@@ -130,7 +130,7 @@ class BannerAdsListPanel extends StatelessWidget {
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
                                   child: _BannerImage(
-                                    imageUrl: banner.imagePath,
+                                    imageUrl: banner.publicUrl,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -247,7 +247,7 @@ class _BannerImage extends StatelessWidget {
     }
 
     return Image.network(
-      "https://ibwawjjqewuikmmnxqgo.supabase.co/storage/v1/object/public/ads/$imageUrl",
+      imageUrl!,
       width: 120,
       height: 72,
       fit: BoxFit.cover,

@@ -165,6 +165,7 @@ class CategoriesCubit extends Cubit<CategoriesState> {
       selectedImageName = null;
       emit(CategoriesSuccess('تم حذف التصنيف'));
     } catch (e) {
+      print('Error deleting category: $e');
       emit(CategoriesError('فشل في حذف التصنيف'));
     }
   }

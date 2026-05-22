@@ -1,7 +1,9 @@
 import 'package:alkhafajdashboard/data/model/discountCodeModel.dart';
+import 'package:alkhafajdashboard/data/model/session_user_model.dart';
 import 'package:alkhafajdashboard/data/repository.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 part 'discount_codes_state.dart';
 
@@ -12,6 +14,7 @@ class DiscountCodesCubit extends Cubit<DiscountCodesState> {
 
   List<DiscountCodeModel> discountCodes = <DiscountCodeModel>[];
   DiscountCodeModel? selectedDiscountCode;
+  SessionUserModel? currentUser;
 
   final TextEditingController codeController = TextEditingController();
   final TextEditingController discountPercentController = TextEditingController(
@@ -29,9 +32,12 @@ class DiscountCodesCubit extends Cubit<DiscountCodesState> {
   bool isActive = true;
   DateTime expiryDate = DateTime.now().add(const Duration(days: 30));
 
+  bool get isAdmin => currentUser?.isAdmin ?? false;
+
   Future<void> fetchDiscountCodes() async {
     emit(DiscountCodesLoading());
     try {
+      currentUser = await _repository.fetchCurrentSessionUser();
       final List<dynamic> response = await _repository.fetchDiscountCodes();
       discountCodes = response
           .whereType<Map<String, dynamic>>()
@@ -105,6 +111,15 @@ class DiscountCodesCubit extends Cubit<DiscountCodesState> {
   }
 
   Future<void> saveDiscountCode() async {
+    if (!isAdmin) {
+      emit(
+        DiscountCodesError(
+          'ليس لديك صلاحية لإنشاء أو تعديل البرومو كود. يرجى تسجيل الدخول بحساب أدمن.',
+        ),
+      );
+      return;
+    }
+
     final String code = codeController.text.trim().toUpperCase();
     final double? minPurchase = double.tryParse(
       minPurchaseController.text.trim(),
@@ -191,15 +206,20 @@ class DiscountCodesCubit extends Cubit<DiscountCodesState> {
       await fetchDiscountCodes();
       emit(DiscountCodesSuccess('تم تحديث البرومو كود بنجاح'));
     } catch (error) {
-      if (error.toString().contains('23505')) {
-        emit(DiscountCodesError('يوجد برومو كود بنفس الاسم بالفعل'));
-        return;
-      }
-      emit(DiscountCodesError('فشل في حفظ البرومو كود'));
+      emit(DiscountCodesError(_mapSaveError(error)));
     }
   }
 
   Future<void> deleteSelectedDiscountCode() async {
+    if (!isAdmin) {
+      emit(
+        DiscountCodesError(
+          'ليس لديك صلاحية لحذف البرومو كود. يرجى تسجيل الدخول بحساب أدمن.',
+        ),
+      );
+      return;
+    }
+
     if (selectedDiscountCode?.id == null) {
       emit(DiscountCodesError('اختر برومو كود للحذف أولًا'));
       return;
@@ -217,6 +237,31 @@ class DiscountCodesCubit extends Cubit<DiscountCodesState> {
     } catch (_) {
       emit(DiscountCodesError('فشل في حذف البرومو كود'));
     }
+  }
+
+  String _mapSaveError(Object error) {
+    if (error is PostgrestException) {
+      if (error.code == '23505') {
+        return 'يوجد برومو كود بنفس الاسم بالفعل';
+      }
+
+      if (error.code == '42501' ||
+          error.message.toLowerCase().contains('row-level security')) {
+        return 'قاعدة البيانات رفضت العملية بسبب الصلاحيات. استخدم حساب أدمن لإدارة البرومو كود.';
+      }
+
+      final String details = error.message.trim();
+      if (details.isNotEmpty) {
+        return 'فشل في حفظ البرومو كود: $details';
+      }
+    }
+
+    final String fallback = error.toString().trim();
+    if (fallback.isNotEmpty) {
+      return 'فشل في حفظ البرومو كود: $fallback';
+    }
+
+    return 'فشل في حفظ البرومو كود';
   }
 
   void _syncControllers() {

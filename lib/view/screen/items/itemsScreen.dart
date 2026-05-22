@@ -10,54 +10,72 @@ class ItemsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => ItemsCubit()..initialize(),
-      child: DashboardScaffold(
-        currentRoute: 'items',
-        title: 'إدارة المنتجات',
-        subtitle:
-            'تحرير المنتجات، الصور، الخصومات، الألوان، الأحجام والأرشفة ضمن مساحة عمل واحدة واضحة.',
-        child: BlocConsumer<ItemsCubit, ItemsState>(
-          listener: (BuildContext context, ItemsState state) {
-            if (state is ItemsError) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
-            }
+    return BlocConsumer<ItemsCubit, ItemsState>(
+      listener: (context, state) {
+        if (state is ItemsError) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        }
 
-            if (state is ItemsSuccess) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
-            }
-          },
-          builder: (BuildContext context, ItemsState state) {
-            final ItemsCubit cubit = context.read<ItemsCubit>();
-            final bool isBusy = state is ItemsLoading || state is ItemsSaving;
+        if (state is ItemsSuccess) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        }
+      },
+      builder: (context, state) {
+        final ItemsCubit cubit = context.read<ItemsCubit>();
+        if (state is ItemsInitial) {
+          cubit.initialize();
+        }
+        return DashboardScaffold(
+          currentRoute: 'items',
+          title: 'إدارة المنتجات',
+          subtitle:
+              'تحرير المنتجات، الصور، الخصومات، الألوان، الأحجام والأرشفة ضمن مساحة عمل واحدة واضحة.',
+          child: BlocConsumer<ItemsCubit, ItemsState>(
+            listener: (BuildContext context, ItemsState state) {
+              if (state is ItemsError) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.message)));
+              }
 
-            if (state is ItemsLoading &&
-                cubit.items.isEmpty &&
-                cubit.categories.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
+              if (state is ItemsSuccess) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.message)));
+              }
+            },
+            builder: (BuildContext context, ItemsState state) {
+              final ItemsCubit cubit = context.read<ItemsCubit>();
+              final bool isBusy = state is ItemsLoading || state is ItemsSaving;
 
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Expanded(
-                  flex: 3,
-                  child: ItemsListPanel(cubit: cubit, isBusy: isBusy),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  flex: 2,
-                  child: ItemsFormPanel(cubit: cubit, isBusy: isBusy),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+              if (state is ItemsLoading &&
+                  cubit.items.isEmpty &&
+                  cubit.categories.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(
+                    flex: 3,
+                    child: ItemsListPanel(cubit: cubit, isBusy: isBusy),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    flex: 2,
+                    child: ItemsFormPanel(cubit: cubit, isBusy: isBusy),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

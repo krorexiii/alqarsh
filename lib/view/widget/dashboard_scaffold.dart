@@ -26,62 +26,30 @@ class DashboardScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final bool showEmbeddedSidebar =
-            showDrawer && constraints.maxWidth >= 1180;
-
-        return Scaffold(
-          drawer: showDrawer && !showEmbeddedSidebar
-              ? DashboardDrawer(currentRoute: currentRoute)
-              : null,
-          backgroundColor: Colors.transparent,
-          body: DecoratedBox(
-            decoration: const BoxDecoration(gradient: ConstVar.heroGradient),
-            child: Stack(
-              children: <Widget>[
-                const _BackgroundOrbs(),
-                SafeArea(
-                  child: Padding(
-                    padding: padding,
-                    child: showEmbeddedSidebar
-                        ? Row(
-                            children: <Widget>[
-                              SizedBox(
-                                width: 320,
-                                child: DashboardDrawer(
-                                  currentRoute: currentRoute,
-                                  embedded: true,
-                                ),
-                              ),
-                              const SizedBox(width: 24),
-                              Expanded(
-                                child: _ContentArea(
-                                  title: title,
-                                  subtitle: subtitle,
-                                  actions: actions,
-                                  child: child,
-                                  isBack: isBack,
-                                  showMenuButton: false,
-                                ),
-                              ),
-                            ],
-                          )
-                        : _ContentArea(
-                            title: title,
-                            subtitle: subtitle,
-                            actions: actions,
-                            child: child,
-                            isBack: isBack,
-                            showMenuButton: showDrawer,
-                          ),
-                  ),
+    return Scaffold(
+      drawer: showDrawer ? DashboardDrawer(currentRoute: currentRoute) : null,
+      backgroundColor: Colors.transparent,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(gradient: ConstVar.heroGradient),
+        child: Stack(
+          children: <Widget>[
+            const _BackgroundOrbs(),
+            SafeArea(
+              child: Padding(
+                padding: padding,
+                child: _ContentArea(
+                  title: title,
+                  subtitle: subtitle,
+                  actions: actions,
+                  isBack: isBack,
+                  showMenuButton: showDrawer,
+                  child: child,
                 ),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }
@@ -166,14 +134,6 @@ class _DashboardHeader extends StatelessWidget {
                     color: ConstVar.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: ConstVar.textMuted,
-                    height: 1.35,
-                  ),
-                ),
               ],
             ),
           ),
@@ -198,8 +158,8 @@ class _LeadingButton extends StatelessWidget {
     final IconData icon = isBack
         ? Icons.arrow_forward_rounded
         : showMenuButton
-        ? Icons.grid_view_rounded
-        : Icons.dashboard_customize_rounded;
+        ? Icons.menu_rounded
+        : Icons.menu_rounded;
 
     return InkWell(
       onTap: isBack
@@ -216,7 +176,7 @@ class _LeadingButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           boxShadow: ConstVar.softShadow,
         ),
-        child: Icon(icon, color: Colors.white, size: 30),
+        child: Icon(icon, color: Colors.black, size: 30),
       ),
     );
   }

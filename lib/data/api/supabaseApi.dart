@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:alkhafajdashboard/config/app_supabase_config.dart';
 import 'package:alkhafajdashboard/data/model/bannerAdsModel.dart';
 import 'package:alkhafajdashboard/data/model/categoryModel.dart';
 import 'package:alkhafajdashboard/data/model/discountCodeModel.dart';
@@ -13,12 +14,12 @@ import 'package:alkhafajdashboard/data/model/partItemModel.dart';
 import 'package:alkhafajdashboard/data/model/partModel.dart';
 import 'package:alkhafajdashboard/data/model/session_user_model.dart';
 import 'package:alkhafajdashboard/data/model/userModel.dart';
+import 'package:alkhafajdashboard/utils/dashboard_auth_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseApi {
   SupabaseClient supabase = Supabase.instance.client;
-  String shopId = "550e8400-e29b-41d4-a716-446655440001";
-  static const String recoveryRedirectUrl = 'http://localhost:52157/';
+  final String shopId = AppSupabaseConfig.shopId;
 
   login({required String user, required String password}) async {
     return await supabase.auth.signInWithPassword(
@@ -28,7 +29,10 @@ class SupabaseApi {
   }
 
   Future<void> resetPassword({required String email}) async {
-    await supabase.auth.resetPasswordForEmail(email);
+    await supabase.auth.resetPasswordForEmail(
+      email.trim().toLowerCase(),
+      redirectTo: AppSupabaseConfig.recoveryRedirectUrl,
+    );
   }
 
   Future<void> verifyRecoveryOtp({
@@ -36,9 +40,10 @@ class SupabaseApi {
     required String otp,
   }) async {
     await supabase.auth.verifyOTP(
-      email: email,
-      token: otp,
+      email: email.trim().toLowerCase(),
+      token: otp.trim(),
       type: OtpType.recovery,
+      redirectTo: AppSupabaseConfig.recoveryRedirectUrl,
     );
   }
 
@@ -65,15 +70,55 @@ class SupabaseApi {
     return SessionUserModel.fromJson(data);
   }
 
-  fetchLocations() async {
-    try {
-      return await supabase
-          .from('sotre_location')
-          .select()
-          .eq("shop_id", shopId);
-    } catch (_) {
-      return await supabase.from('location').select().eq("shop_id", shopId);
-    }
+  Future<List<dynamic>> fetchStoreLocations() async {
+    return await supabase
+        .from('sotre_location')
+        .select()
+        .eq('shop_id', shopId)
+        .order('name', ascending: true)
+        .order('id', ascending: true);
+  }
+
+  Future<void> addStoreLocation({
+    required String name,
+    required String locationName,
+    required double lX,
+    required double lY,
+  }) async {
+    await supabase.from('sotre_location').insert(<String, dynamic>{
+      'shop_id': shopId,
+      'name': name,
+      'location_name': locationName,
+      'l_x': lX,
+      'l_y': lY,
+    });
+  }
+
+  Future<void> updateStoreLocation({
+    required int id,
+    required String name,
+    required String locationName,
+    required double lX,
+    required double lY,
+  }) async {
+    await supabase
+        .from('sotre_location')
+        .update(<String, dynamic>{
+          'name': name,
+          'location_name': locationName,
+          'l_x': lX,
+          'l_y': lY,
+        })
+        .eq('id', id)
+        .eq('shop_id', shopId);
+  }
+
+  Future<void> deleteStoreLocation({required int id}) async {
+    await supabase
+        .from('sotre_location')
+        .delete()
+        .eq('id', id)
+        .eq('shop_id', shopId);
   }
 
   fetchUsers() async {
@@ -207,7 +252,7 @@ class SupabaseApi {
       await supabase.storage.from('icon').remove([category.icon!]);
     }
 
-    await supabase.from('categories').delete().eq('id', category.id as Object);
+    await supabase.from('categories').delete().eq('id', category.id!);
   }
 
   Future<List<dynamic>> fetchDeliveryZones() async {
@@ -587,27 +632,27 @@ class SupabaseApi {
   }
 
   Future<List<OrderModel>> fetchOrders() async {
+    List<dynamic> orderRows;
+
     try {
-      final List<dynamic> response = await supabase
+      orderRows = await supabase
           .from('orders')
           .select(
             '*, customers(name, phone), order_items(*), order_status_history(*)',
           )
           .eq('shop_id', shopId)
           .order('created_at', ascending: false);
-
-      return await _composeOrdersWithNewLocations(response);
     } catch (e) {
       print('fetchOrders relational query failed, fallback to basic query: $e');
 
-      final List<dynamic> fallback = await supabase
+      orderRows = await supabase
           .from('orders')
           .select('*')
           .eq('shop_id', shopId)
           .order('created_at', ascending: false);
-
-      return await _composeOrdersWithNewLocations(fallback);
     }
+
+    return await _composeOrdersWithNewLocations(orderRows);
   }
 
   Future<List<OrderModel>> _composeOrdersWithNewLocations(
@@ -693,7 +738,7 @@ class SupabaseApi {
       final List<dynamic> customerLocationRows = await supabase
           .from('location')
           .select(
-            'id, customer_id, location_name, full_address, "L_X", "L_y", is_default, updated_at',
+            'id, customer_id, location_name, full_address, l_x, l_y, is_default, updated_at',
           )
           .eq('shop_id', shopId)
           .inFilter('customer_id', customerIds.toList())
@@ -715,7 +760,7 @@ class SupabaseApi {
     if (assignedLocationIds.isNotEmpty) {
       final List<dynamic> storeLocationRows = await supabase
           .from('sotre_location')
-          .select('id, name, location_name, "L_X", "L_y"')
+          .select('id, name, location_name, l_x, l_y')
           .inFilter('id', assignedLocationIds.toList());
 
       for (final row in storeLocationRows.whereType<Map<String, dynamic>>()) {
@@ -751,9 +796,13 @@ class SupabaseApi {
         if (row['order_status_history'] is! List)
           'order_status_history': fallbackHistory,
         if (customerLoc != null)
-          'customer_lat': (customerLoc['L_X'] as num?)?.toDouble(),
+          'customer_lat':
+              (customerLoc['l_x'] as num?)?.toDouble() ??
+              (customerLoc['L_X'] as num?)?.toDouble(),
         if (customerLoc != null)
-          'customer_lng': (customerLoc['L_y'] as num?)?.toDouble(),
+          'customer_lng':
+              (customerLoc['l_y'] as num?)?.toDouble() ??
+              (customerLoc['L_y'] as num?)?.toDouble(),
         if (customerLoc != null)
           'customer_location_name':
               (customerLoc['full_address'] ?? customerLoc['location_name'])
@@ -798,11 +847,14 @@ class SupabaseApi {
     int? locationId,
     String? notes,
   }) async {
+    final int? normalizedLocationId = (locationId != null && locationId > 0)
+        ? locationId
+        : null;
     final Map<String, dynamic> payload = {'status': status};
     if (status == 'pending' || status == 'cancelled') {
       payload['assigned_location_id'] = null;
-    } else if (locationId != null) {
-      payload['assigned_location_id'] = locationId;
+    } else if (normalizedLocationId != null) {
+      payload['assigned_location_id'] = normalizedLocationId;
     }
 
     await supabase
@@ -816,7 +868,7 @@ class SupabaseApi {
       'status': status,
       'changed_by': changedBy,
       'notes': notes,
-      'location_id': locationId,
+      'location_id': normalizedLocationId,
     });
   }
 
@@ -824,26 +876,26 @@ class SupabaseApi {
     print(
       "Adding user: ${user.name}, username: ${user.username}, role: ${user.role}, locationId: ${user.locationId}",
     );
-
-    final email = user.username!.trim();
-
-    AuthResponse response = await supabase.auth.signUp(
-      email: email,
-      password: user.password!,
+    final response = await supabase.functions.invoke(
+      'create-dashboard-user',
+      body: <String, dynamic>{
+        'shop_id': shopId,
+        'name': user.name,
+        'username': normalizeDashboardUsername(user.username ?? ''),
+        'email': normalizeDashboardEmail(user.username ?? ''),
+        'password': user.password,
+        'role': user.role,
+        'location_id': user.locationId,
+      },
     );
 
-    if (response.user == null) {
-      throw AuthException('تعذر إنشاء الحساب');
+    if (response.status < 200 || response.status >= 300) {
+      final dynamic data = response.data;
+      final String message = data is Map<String, dynamic>
+          ? (data['error']?.toString() ?? 'تعذر إنشاء الحساب')
+          : 'تعذر إنشاء الحساب';
+      throw AuthException(message);
     }
-
-    await supabase.from('shop_users').insert({
-      "name": user.name,
-      "user_id": response.user?.id,
-      "username": user.username,
-      "role": user.role,
-      "shop_id": shopId,
-      "location_id": user.locationId,
-    });
   }
 
   updateUser({
@@ -868,64 +920,136 @@ class SupabaseApi {
 
   /// جلب جميع الإشعارات المرسلة من الداشبورد
   Future<List<Map<String, dynamic>>> fetchNotifications() async {
-    final List<dynamic> response = await supabase
+    final List<dynamic> customerResponse = await supabase
         .from('customer_notifications')
-        .select('*, customers(name, phone)')
+        .select('*, customers(name, phone), delivery_meta')
         .eq('shop_id', shopId)
         .order('created_at', ascending: false);
 
-    return response.whereType<Map<String, dynamic>>().toList();
+    final List<dynamic> broadcastResponse = await supabase
+        .from('broadcast_notifications')
+        .select('*, delivery_meta')
+        .eq('shop_id', shopId)
+        .order('created_at', ascending: false);
+
+    final List<Map<String, dynamic>> notifications = <Map<String, dynamic>>[
+      ...broadcastResponse.whereType<Map<String, dynamic>>().map(
+        (Map<String, dynamic> row) => <String, dynamic>{
+          ...row,
+          'scope': 'broadcast',
+        },
+      ),
+      ...customerResponse.whereType<Map<String, dynamic>>().map(
+        (Map<String, dynamic> row) => <String, dynamic>{
+          ...row,
+          'scope': 'customer',
+        },
+      ),
+    ];
+
+    notifications.sort((Map<String, dynamic> a, Map<String, dynamic> b) {
+      final DateTime left =
+          DateTime.tryParse((a['created_at'] ?? '').toString()) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final DateTime right =
+          DateTime.tryParse((b['created_at'] ?? '').toString()) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      return right.compareTo(left);
+    });
+
+    return notifications;
   }
 
-  /// إرسال إشعار جماعي (لكل العملاء أو عبر topic)
-  Future<void> sendBroadcastNotification({
+  Future<List<Map<String, dynamic>>> fetchNotificationCustomers() async {
+    final List<dynamic> response = await supabase
+        .from('customers')
+        .select('id, name, phone, is_active, is_banned')
+        .eq('shop_id', shopId)
+        .order('name', ascending: true)
+        .order('id', ascending: true);
+
+    return response
+        .whereType<Map<String, dynamic>>()
+        .where(
+          (Map<String, dynamic> row) =>
+              row['is_banned'] != true && row['is_active'] != false,
+        )
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> sendBroadcastNotification({
     required String title,
     required String body,
     required String type, // 'promotion' | 'announcement'
+    Map<String, dynamic>? payload,
   }) async {
-    // جلب كل العملاء المرتبطين بالمتجر
-    final List<dynamic> customers = await supabase
-        .from('customers')
-        .select('id')
-        .eq('shop_id', shopId);
+    final response = await supabase.functions.invoke(
+      'send-notification',
+      body: <String, dynamic>{
+        'audience': 'broadcast',
+        'shop_id': shopId,
+        'title': title,
+        'body': body,
+        'type': type,
+        'payload': payload ?? <String, dynamic>{},
+      },
+    );
 
-    if (customers.isEmpty) return;
+    if (response.status < 200 || response.status >= 300) {
+      final dynamic data = response.data;
+      final String message = data is Map<String, dynamic>
+          ? (data['error']?.toString() ?? 'تعذر إرسال الإشعار العام')
+          : 'تعذر إرسال الإشعار العام';
+      throw AuthException(message);
+    }
 
-    final List<Map<String, dynamic>> rows = customers
-        .whereType<Map<String, dynamic>>()
-        .map(
-          (c) => {
-            'customer_id': c['id'],
-            'shop_id': shopId,
-            'title': title,
-            'body': body,
-            'type': type,
-            'is_read': false,
-          },
-        )
-        .toList();
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
 
-    // إدراج الإشعارات دفعة واحدة
-    await supabase.from('customer_notifications').insert(rows);
+    return <String, dynamic>{};
   }
 
   /// إرسال إشعار لعميل محدد
-  Future<void> sendNotificationToCustomer({
+  Future<Map<String, dynamic>> sendNotificationToCustomer({
     required int customerId,
     required String title,
     required String body,
     required String type,
     int? orderId,
+    String? orderStatus,
+    Map<String, dynamic>? payload,
+    String? imageUrl,
   }) async {
-    await supabase.from('customer_notifications').insert({
-      'customer_id': customerId,
-      'shop_id': shopId,
-      'title': title,
-      'body': body,
-      'type': type,
-      'order_id': orderId,
-      'is_read': false,
-    });
+    final response = await supabase.functions.invoke(
+      'send-notification',
+      body: <String, dynamic>{
+        'audience': 'customer',
+        'shop_id': shopId,
+        'customer_id': customerId,
+        'title': title,
+        'body': body,
+        'type': type,
+        if (orderId != null) 'order_id': orderId,
+        if (orderStatus != null) 'order_status': orderStatus,
+        if (imageUrl != null) 'image_url': imageUrl,
+        'payload': payload ?? <String, dynamic>{},
+      },
+    );
+
+    if (response.status < 200 || response.status >= 300) {
+      final dynamic data = response.data;
+      final String message = data is Map<String, dynamic>
+          ? (data['error']?.toString() ?? 'تعذر إرسال الإشعار الفردي')
+          : 'تعذر إرسال الإشعار الفردي';
+      throw AuthException(message);
+    }
+
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
+
+    return <String, dynamic>{};
   }
 
   /// حذف إشعار

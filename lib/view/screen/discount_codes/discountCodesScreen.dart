@@ -2,6 +2,7 @@ import 'package:alkhafajdashboard/view/screen/discount_codes/cubit/discount_code
 import 'package:alkhafajdashboard/view/screen/discount_codes/widget/discount_codes_form_panel.dart';
 import 'package:alkhafajdashboard/view/screen/discount_codes/widget/discount_codes_list_panel.dart';
 import 'package:alkhafajdashboard/view/widget/dashboard_scaffold.dart';
+import 'package:alkhafajdashboard/view/widget/mySnackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -20,15 +21,21 @@ class DiscountCodesScreen extends StatelessWidget {
         child: BlocConsumer<DiscountCodesCubit, DiscountCodesState>(
           listener: (BuildContext context, DiscountCodesState state) {
             if (state is DiscountCodesError) {
-              ScaffoldMessenger.of(
+              showMySnackbar(
                 context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
+                title: 'تعذر حفظ البرومو كود',
+                message: state.message,
+                type: SnackbarType.error,
+              );
             }
 
             if (state is DiscountCodesSuccess) {
-              ScaffoldMessenger.of(
+              showMySnackbar(
                 context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
+                title: 'تمت العملية بنجاح',
+                message: state.message,
+                type: SnackbarType.success,
+              );
             }
           },
           builder: (BuildContext context, DiscountCodesState state) {

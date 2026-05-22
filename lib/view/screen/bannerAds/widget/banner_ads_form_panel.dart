@@ -63,8 +63,7 @@ class BannerAdsFormPanel extends StatelessWidget {
             const SizedBox(height: 16),
             _ImagePreview(
               bytes: cubit.selectedImageBytes,
-              networkUrl:
-                  "https://ibwawjjqewuikmmnxqgo.supabase.co/storage/v1/object/public/ads/${selectedBanner?.imagePath}",
+              networkUrl: selectedBanner?.publicUrl,
             ),
             const SizedBox(height: 16),
             Row(

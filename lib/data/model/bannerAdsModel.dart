@@ -2,6 +2,7 @@ class BannerAdsModel {
   int? id;
   String? shopId;
   String? imagePath;
+  String? publicUrl;
   int? sortOrder;
   bool? isActive;
   DateTime? createdAt;
@@ -11,6 +12,7 @@ class BannerAdsModel {
     this.id,
     this.shopId,
     this.imagePath,
+    this.publicUrl,
     this.sortOrder,
     this.isActive,
     this.createdAt,
@@ -22,6 +24,7 @@ class BannerAdsModel {
       id: json['id'],
       shopId: json['shop_id'],
       imagePath: json['image_path'],
+      publicUrl: json['public_url'],
       sortOrder: json['sort_order'],
       isActive: json['is_active'],
       createdAt: json['created_at'] != null
@@ -56,6 +59,7 @@ class BannerAdsModel {
       id: id ?? this.id,
       shopId: shopId ?? this.shopId,
       imagePath: imagePath ?? this.imagePath,
+      publicUrl: publicUrl ?? this.publicUrl,
       sortOrder: sortOrder ?? this.sortOrder,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,

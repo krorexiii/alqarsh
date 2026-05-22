@@ -8,6 +8,7 @@ import 'package:alkhafajdashboard/view/screen/items/itemsScreen.dart';
 import 'package:alkhafajdashboard/view/screen/notifications/notificationsScreen.dart';
 import 'package:alkhafajdashboard/view/screen/orders/ordersScreen.dart';
 import 'package:alkhafajdashboard/view/screen/parts/partsScreen.dart';
+import 'package:alkhafajdashboard/view/screen/store_locations/store_locations_screen.dart';
 import 'package:alkhafajdashboard/view/screen/users/usersScreen.dart';
 import 'package:alkhafajdashboard/view/widget/myText.dart';
 import 'package:flutter/material.dart';
@@ -16,235 +17,166 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../screen/users/cubit/users_cubit.dart';
 
 class DashboardDrawer extends StatelessWidget {
-  const DashboardDrawer({
-    super.key,
-    required this.currentRoute,
-    this.embedded = false,
-  });
+  const DashboardDrawer({super.key, required this.currentRoute});
 
   final String currentRoute;
-  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
-    final Widget content = Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(34),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
-        boxShadow: ConstVar.softShadow,
-      ),
-      child: Column(
-        children: <Widget>[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
-            decoration: BoxDecoration(
-              gradient: ConstVar.brandGradient,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(34),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  width: 66,
-                  height: 66,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.dashboard_customize_rounded,
-                    color: Colors.white,
-                    size: 34,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                const MyText(
-                  'لوحة إدارة الكفاح',
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                ),
-                const SizedBox(height: 8),
-                MyText(
-                  'هوية احترافية موحّدة لإدارة المنتجات والطلبات والمحتوى من مكان واحد.',
-                  color: Colors.white.withValues(alpha: 0.92),
-                  fontSize: 15,
-                  height: 1.35,
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: const Row(
-                    children: <Widget>[
-                      Icon(
-                        Icons.auto_awesome_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: MyText(
-                          'تنقل سريع وتصميم متماسك لكل الواجهات',
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: <Widget>[
-                _DrawerTile(
-                  title: 'الرئيسية',
-                  subtitle: 'نظرة شاملة وسريعة',
-                  icon: Icons.home_rounded,
-                  isSelected: currentRoute == 'home',
-                  onTap: () => _openPage(context, 'home', const HomeScreen()),
-                ),
-                _DrawerTile(
-                  title: 'الطلبات',
-                  subtitle: 'مراقبة الحالة والتجهيز',
-                  icon: Icons.receipt_long_rounded,
-                  isSelected: currentRoute == 'orders',
-                  onTap: () =>
-                      _openPage(context, 'orders', const OrdersScreen()),
-                ),
-                _DrawerTile(
-                  title: 'المستخدمون',
-                  subtitle: 'إدارة الصلاحيات والمواقع',
-                  icon: Icons.people_alt_rounded,
-                  isSelected: currentRoute == 'users',
-                  onTap: () {
-                    BlocProvider.of<UsersCubit>(context).fetchUsers();
-                    _openPage(context, 'users', const UsersScreen());
-                  },
-                ),
-                _DrawerTile(
-                  title: 'الإعلانات',
-                  subtitle: 'البانرات والحملات المرئية',
-                  icon: Icons.photo_library_rounded,
-                  isSelected: currentRoute == 'banner_ads',
-                  onTap: () =>
-                      _openPage(context, 'banner_ads', const BannerAdsScreen()),
-                ),
-                _DrawerTile(
-                  title: 'التصنيفات',
-                  subtitle: 'تنظيم هيكل المتجر',
-                  icon: Icons.category_rounded,
-                  isSelected: currentRoute == 'categories',
-                  onTap: () => _openPage(
-                    context,
-                    'categories',
-                    const CategoriesScreen(),
-                  ),
-                ),
-                _DrawerTile(
-                  title: 'المنتجات',
-                  subtitle: 'إدارة المخزون والعروض',
-                  icon: Icons.inventory_2_rounded,
-                  isSelected: currentRoute == 'items',
-                  onTap: () => _openPage(context, 'items', const ItemsScreen()),
-                ),
-                _DrawerTile(
-                  title: 'الأقسام',
-                  subtitle: 'أجزاء الواجهة الرئيسية',
-                  icon: Icons.view_module_rounded,
-                  isSelected: currentRoute == 'parts',
-                  onTap: () => _openPage(context, 'parts', const PartsScreen()),
-                ),
-                _DrawerTile(
-                  title: 'أكواد الخصم',
-                  subtitle: 'إدارة البرومو كود والعروض',
-                  icon: Icons.local_offer_rounded,
-                  isSelected: currentRoute == 'discount_codes',
-                  onTap: () => _openPage(
-                    context,
-                    'discount_codes',
-                    const DiscountCodesScreen(),
-                  ),
-                ),
-                _DrawerTile(
-                  title: 'مناطق التوصيل',
-                  subtitle: 'التسعير حسب المدينة',
-                  icon: Icons.local_shipping_rounded,
-                  isSelected: currentRoute == 'delivery_zones',
-                  onTap: () => _openPage(
-                    context,
-                    'delivery_zones',
-                    const DeliveryZonesScreen(),
-                  ),
-                ),
-                _DrawerTile(
-                  title: 'الإشعارات',
-                  subtitle: 'الحملات والتنبيهات',
-                  icon: Icons.notifications_active_rounded,
-                  isSelected: currentRoute == 'notifications',
-                  onTap: () => _openPage(
-                    context,
-                    'notifications',
-                    const NotificationsScreen(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: ConstVar.panelSoft,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: ConstVar.borderColor),
-              ),
-              child: const Row(
-                children: <Widget>[
-                  Icon(Icons.verified_user_rounded, color: ConstVar.pColor),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: MyText(
-                      'واجهة عربية كاملة مع عناصر موحّدة قابلة للتوسعة.',
-                      fontSize: 14,
-                      color: ConstVar.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (embedded) {
-      return content;
-    }
-
     return Drawer(
       width: 340,
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 24, 0, 24),
-        child: content,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(34),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
+            boxShadow: ConstVar.softShadow,
+          ),
+          child: Column(
+            children: <Widget>[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+                decoration: BoxDecoration(
+                  gradient: ConstVar.brandGradient,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(34),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const MyText(
+                      'قائمة التحكم',
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: <Widget>[
+                    _DrawerTile(
+                      title: 'الرئيسية',
+                      subtitle: 'نظرة شاملة وسريعة',
+                      icon: Icons.home_rounded,
+                      isSelected: currentRoute == 'home',
+                      onTap: () =>
+                          _openPage(context, 'home', const HomeScreen()),
+                    ),
+                    _DrawerTile(
+                      title: 'الطلبات',
+                      subtitle: 'مراقبة الحالة والتجهيز',
+                      icon: Icons.receipt_long_rounded,
+                      isSelected: currentRoute == 'orders',
+                      onTap: () =>
+                          _openPage(context, 'orders', const OrdersScreen()),
+                    ),
+                    _DrawerTile(
+                      title: 'المستخدمون',
+                      subtitle: 'إدارة الصلاحيات والمواقع',
+                      icon: Icons.people_alt_rounded,
+                      isSelected: currentRoute == 'users',
+                      onTap: () {
+                        BlocProvider.of<UsersCubit>(context).fetchUsers();
+                        _openPage(context, 'users', const UsersScreen());
+                      },
+                    ),
+                    _DrawerTile(
+                      title: 'الإعلانات',
+                      subtitle: 'البانرات والحملات المرئية',
+                      icon: Icons.photo_library_rounded,
+                      isSelected: currentRoute == 'banner_ads',
+                      onTap: () => _openPage(
+                        context,
+                        'banner_ads',
+                        const BannerAdsScreen(),
+                      ),
+                    ),
+                    _DrawerTile(
+                      title: 'التصنيفات',
+                      subtitle: 'تنظيم هيكل المتجر',
+                      icon: Icons.category_rounded,
+                      isSelected: currentRoute == 'categories',
+                      onTap: () => _openPage(
+                        context,
+                        'categories',
+                        const CategoriesScreen(),
+                      ),
+                    ),
+                    _DrawerTile(
+                      title: 'المنتجات',
+                      subtitle: 'إدارة المخزون والعروض',
+                      icon: Icons.inventory_2_rounded,
+                      isSelected: currentRoute == 'items',
+                      onTap: () =>
+                          _openPage(context, 'items', const ItemsScreen()),
+                    ),
+                    _DrawerTile(
+                      title: 'الأقسام',
+                      subtitle: 'أجزاء الواجهة الرئيسية',
+                      icon: Icons.view_module_rounded,
+                      isSelected: currentRoute == 'parts',
+                      onTap: () =>
+                          _openPage(context, 'parts', const PartsScreen()),
+                    ),
+                    _DrawerTile(
+                      title: 'أكواد الخصم',
+                      subtitle: 'إدارة البرومو كود والعروض',
+                      icon: Icons.local_offer_rounded,
+                      isSelected: currentRoute == 'discount_codes',
+                      onTap: () => _openPage(
+                        context,
+                        'discount_codes',
+                        const DiscountCodesScreen(),
+                      ),
+                    ),
+                    _DrawerTile(
+                      title: 'مناطق التوصيل',
+                      subtitle: 'التسعير حسب المدينة',
+                      icon: Icons.local_shipping_rounded,
+                      isSelected: currentRoute == 'delivery_zones',
+                      onTap: () => _openPage(
+                        context,
+                        'delivery_zones',
+                        const DeliveryZonesScreen(),
+                      ),
+                    ),
+                    _DrawerTile(
+                      title: 'مواقع المتجر',
+                      subtitle: 'الفروع ونقاط تجهيز الطلبات',
+                      icon: Icons.storefront_rounded,
+                      isSelected: currentRoute == 'store_locations',
+                      onTap: () => _openPage(
+                        context,
+                        'store_locations',
+                        const StoreLocationsScreen(),
+                      ),
+                    ),
+                    _DrawerTile(
+                      title: 'الإشعارات',
+                      subtitle: 'الحملات والتنبيهات',
+                      icon: Icons.notifications_active_rounded,
+                      isSelected: currentRoute == 'notifications',
+                      onTap: () => _openPage(
+                        context,
+                        'notifications',
+                        const NotificationsScreen(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -255,16 +187,12 @@ class DashboardDrawer extends StatelessWidget {
     Widget page,
   ) async {
     if (currentRoute == route) {
-      if (!embedded) {
-        Navigator.of(context).pop();
-      }
+      Navigator.of(context).pop();
       return;
     }
 
-    if (!embedded) {
-      Navigator.of(context).pop();
-      await Future<void>.delayed(const Duration(milliseconds: 180));
-    }
+    Navigator.of(context).pop();
+    await Future<void>.delayed(const Duration(milliseconds: 180));
 
     if (!context.mounted) {
       return;

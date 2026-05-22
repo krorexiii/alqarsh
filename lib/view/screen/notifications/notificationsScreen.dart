@@ -19,7 +19,7 @@ class NotificationsScreen extends StatelessWidget {
         currentRoute: 'notifications',
         title: 'إدارة الإشعارات',
         subtitle:
-            'أنشئ حملات Push للعملاء وراجع الرسائل السابقة ضمن لوحة عربية مريحة وسريعة.',
+            'إرسال عام عبر Topic وإرسال فردي عبر Token مع سجل موحد للإشعارات داخل المتجر.',
         actions: <Widget>[
           Builder(
             builder: (BuildContext context) => FilledButton.icon(
@@ -90,6 +90,13 @@ class _NotificationsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final int broadcastCount = cubit.notifications
+        .where((Map<String, dynamic> row) => row['scope'] == 'broadcast')
+        .length;
+    final int customerCount = cubit.notifications
+        .where((Map<String, dynamic> row) => row['scope'] == 'customer')
+        .length;
+
     return MyCard(
       child: Row(
         children: <Widget>[
@@ -98,13 +105,13 @@ class _NotificationsHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const MyText(
-                  'إرسال إشعارات Push للعملاء',
+                  'Push معماري وآمن من خلال Supabase',
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                 ),
                 const SizedBox(height: 8),
                 const MyText(
-                  'أرسل عروضًا أو إعلانات عامة، وستظهر مباشرة في تطبيق العملاء.',
+                  'الإشعارات العامة تُرسل عبر Topic، والفردية تُرسل عبر Token محفوظ في Supabase بدون كشف أسرار Firebase داخل Flutter.',
                   fontSize: 15,
                   color: ConstVar.textMuted,
                 ),
@@ -115,13 +122,18 @@ class _NotificationsHeader extends StatelessWidget {
                   children: <Widget>[
                     _InfoChip(
                       icon: Icons.people_alt_rounded,
-                      label: 'عدد العملاء',
+                      label: 'العملاء المعروفون',
                       value: '${cubit.customerCount}',
                     ),
                     _InfoChip(
-                      icon: Icons.notifications_active_rounded,
-                      label: 'الإشعارات الحالية',
-                      value: '${cubit.notifications.length}',
+                      icon: Icons.campaign_rounded,
+                      label: 'العامة',
+                      value: '$broadcastCount',
+                    ),
+                    _InfoChip(
+                      icon: Icons.person_rounded,
+                      label: 'الفردية',
+                      value: '$customerCount',
                     ),
                   ],
                 ),
@@ -130,7 +142,7 @@ class _NotificationsHeader extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           SizedBox(
-            width: 210,
+            width: 220,
             child: MyButton(
               text: 'إرسال إشعار جديد',
               icon: Icons.send_rounded,
@@ -209,14 +221,26 @@ class _NotificationCard extends StatelessWidget {
     final String title = (notification['title'] ?? '').toString();
     final String body = (notification['body'] ?? '').toString();
     final String type = (notification['type'] ?? '').toString();
+    final String scope = (notification['scope'] ?? 'customer').toString();
     final String createdAt = (notification['created_at'] ?? '').toString();
     final int? id = notification['id'] as int?;
+    final String? topic = notification['topic']?.toString();
+    final bool isSentFcm = notification['is_sent_fcm'] == true;
     final Map<String, dynamic>? customer =
         notification['customers'] is Map<String, dynamic>
         ? notification['customers'] as Map<String, dynamic>
         : null;
+    final Map<String, dynamic>? deliveryMeta =
+        notification['delivery_meta'] is Map<String, dynamic>
+        ? notification['delivery_meta'] as Map<String, dynamic>
+        : null;
 
-    final _NotificationMeta meta = _metaForType(type);
+    final _NotificationMeta meta = _metaForType(type, scope);
+    final String sentState = _sentStateLabel(
+      scope: scope,
+      isSentFcm: isSentFcm,
+      deliveryMeta: deliveryMeta,
+    );
 
     return MyCard(
       padding: const EdgeInsets.all(18),
@@ -281,9 +305,25 @@ class _NotificationCard extends StatelessWidget {
                           ? 'بدون تاريخ'
                           : createdAt.split('T').first,
                     ),
+                    _MetaBadge(
+                      icon: scope == 'broadcast'
+                          ? Icons.public_rounded
+                          : Icons.person_rounded,
+                      text: scope == 'broadcast' ? 'عام' : 'فردي',
+                    ),
+                    _MetaBadge(
+                      icon: isSentFcm
+                          ? Icons.check_circle_rounded
+                          : Icons.info_outline_rounded,
+                      text: sentState,
+                    ),
+                    if (scope == 'broadcast' &&
+                        topic != null &&
+                        topic.isNotEmpty)
+                      _MetaBadge(icon: Icons.tag_rounded, text: topic),
                     if (customer != null && customer['name'] != null)
                       _MetaBadge(
-                        icon: Icons.person_rounded,
+                        icon: Icons.person_pin_rounded,
                         text: customer['name'].toString(),
                       ),
                     if (customer != null &&
@@ -298,31 +338,40 @@ class _NotificationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
-          MyButton(
-            text: 'حذف',
-            icon: Icons.delete_outline_rounded,
-            variant: MyButtonVariant.danger,
-            onPressed: id == null
-                ? null
-                : () => cubit.deleteNotification(notificationId: id),
-          ),
+          if (scope == 'customer')
+            MyButton(
+              text: 'حذف',
+              icon: Icons.delete_outline_rounded,
+              variant: MyButtonVariant.danger,
+              onPressed: id == null
+                  ? null
+                  : () => cubit.deleteNotification(notificationId: id),
+            ),
         ],
       ),
     );
   }
 
-  _NotificationMeta _metaForType(String type) {
+  _NotificationMeta _metaForType(String type, String scope) {
+    if (scope == 'broadcast') {
+      return const _NotificationMeta(
+        label: 'عام / Topic',
+        icon: Icons.campaign_rounded,
+        color: ConstVar.infoColor,
+      );
+    }
+
     switch (type) {
       case 'promotion':
         return const _NotificationMeta(
-          label: 'عرض',
+          label: 'عرض فردي',
           icon: Icons.local_offer_rounded,
           color: Color(0xFFE48F12),
         );
       case 'announcement':
         return const _NotificationMeta(
-          label: 'إعلان',
-          icon: Icons.campaign_rounded,
+          label: 'رسالة خاصة',
+          icon: Icons.mark_email_read_rounded,
           color: ConstVar.infoColor,
         );
       case 'order_status':
@@ -331,13 +380,40 @@ class _NotificationCard extends StatelessWidget {
           icon: Icons.receipt_long_rounded,
           color: ConstVar.successColor,
         );
+      case 'welcome':
+        return const _NotificationMeta(
+          label: 'ترحيب',
+          icon: Icons.waving_hand_rounded,
+          color: ConstVar.sColor,
+        );
       default:
         return const _NotificationMeta(
-          label: 'إشعار',
+          label: 'فردي',
           icon: Icons.notifications_rounded,
           color: ConstVar.textMuted,
         );
     }
+  }
+
+  String _sentStateLabel({
+    required String scope,
+    required bool isSentFcm,
+    required Map<String, dynamic>? deliveryMeta,
+  }) {
+    if (scope == 'broadcast') {
+      return isSentFcm ? 'تم عبر Topic' : 'سجل فقط';
+    }
+
+    final int successful =
+        (deliveryMeta?['successful_tokens'] as num?)?.toInt() ?? 0;
+    final int attempted =
+        (deliveryMeta?['attempted_tokens'] as num?)?.toInt() ?? 0;
+
+    if (attempted > 0) {
+      return 'نجح $successful/$attempted';
+    }
+
+    return isSentFcm ? 'تم الإرسال' : 'لا توجد Tokens';
   }
 }
 
@@ -396,7 +472,7 @@ class _EmptyView extends StatelessWidget {
             ),
             SizedBox(height: 8),
             MyText(
-              'ابدأ بإرسال أول إشعار للعملاء من الزر العلوي.',
+              'ابدأ بإرسال إشعار عام عبر Topic أو إشعار فردي عبر Token من الزر العلوي.',
               fontSize: 15,
               color: ConstVar.textMuted,
             ),

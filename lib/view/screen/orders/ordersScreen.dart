@@ -1,5 +1,6 @@
 import 'package:alkhafajdashboard/data/model/locationModel.dart';
 import 'package:alkhafajdashboard/data/model/orders/order_model.dart';
+import 'package:alkhafajdashboard/utils/order_delivery_type_helper.dart';
 import 'package:alkhafajdashboard/utils/constVar.dart';
 import 'package:alkhafajdashboard/view/screen/orders/cubit/orders_cubit.dart';
 import 'package:alkhafajdashboard/view/screen/orders/preparation/orderPreparationScreen.dart';
@@ -205,6 +206,12 @@ class _StatsBar extends StatelessWidget {
             icon: Icons.fiber_new,
           ),
           _StatItem(
+            label: 'مستقبل',
+            count: cubit.visibleOrders.where((o) => o.isFutureDelivery).length,
+            color: Colors.indigo,
+            icon: Icons.event_available,
+          ),
+          _StatItem(
             label: 'مؤكد',
             count: countByStatus('confirmed'),
             color: Colors.blue,
@@ -347,6 +354,45 @@ class _ToolBar extends StatelessWidget {
                       ),
                       border: InputBorder.none,
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xfff0f2f5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<OrdersDeliveryTypeFilter>(
+                    value: cubit.selectedDeliveryTypeFilter,
+                    isDense: true,
+                    icon: Icon(
+                      Icons.filter_alt_outlined,
+                      size: 20,
+                      color: ConstVar.pColor.withValues(alpha: 0.7),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                    items: OrdersDeliveryTypeFilter.values
+                        .map(
+                          (filter) =>
+                              DropdownMenuItem<OrdersDeliveryTypeFilter>(
+                                value: filter,
+                                child: Text(_deliveryTypeFilterLabel(filter)),
+                              ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        cubit.setDeliveryTypeFilter(value);
+                      }
+                    },
                   ),
                 ),
               ),
@@ -650,6 +696,7 @@ class _OrderCard extends StatelessWidget {
     final bool isAdmin = cubit.isAdmin;
     final bool isBusy = context.watch<OrdersCubit>().state is OrdersSaving;
     final SuggestedLocation? suggestion = cubit.getSuggestedLocation(order);
+    final bool isFuture = order.isFutureDelivery;
 
     return Container(
       decoration: BoxDecoration(
@@ -657,6 +704,8 @@ class _OrderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: order.isLate
             ? Border.all(color: Colors.red.shade200, width: 2)
+            : isFuture
+            ? Border.all(color: Colors.indigo.shade200, width: 2)
             : null,
         boxShadow: [
           BoxShadow(
@@ -693,6 +742,10 @@ class _OrderCard extends StatelessWidget {
                     ),
                   ),
                 _StatusBadge(status: order.status),
+                if (isFuture) ...[
+                  const SizedBox(width: 8),
+                  _FutureOrderBadge(order: order),
+                ],
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -727,41 +780,7 @@ class _OrderCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: order.isLate
-                        ? Colors.red.shade50
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.schedule,
-                        size: 15,
-                        color: order.isLate
-                            ? Colors.red.shade700
-                            : Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${order.waitingDuration.inMinutes} د',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: order.isLate
-                              ? Colors.red.shade700
-                              : Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _OrderTimingBadge(order: order),
                 const SizedBox(width: 10),
                 _SmallIconBtn(
                   icon: isAdmin ? Icons.visibility : Icons.fact_check,
@@ -826,6 +845,18 @@ class _OrderCard extends StatelessWidget {
                         text: '${order.discountedItemsCount} مخفض',
                         gradient: [Colors.amber.shade50, Colors.amber.shade100],
                         color: Colors.amber.shade800,
+                      ),
+                    ],
+                    if (isFuture) ...[
+                      const SizedBox(width: 8),
+                      _ModernInfoChip(
+                        icon: Icons.event_available,
+                        text: futureOrderBadgeText(order),
+                        gradient: [
+                          Colors.indigo.shade50,
+                          Colors.indigo.shade100,
+                        ],
+                        color: Colors.indigo.shade700,
                       ),
                     ],
                     if (order.hasPromoDiscount) ...[
@@ -941,7 +972,7 @@ class _InlineStatusActions extends StatelessWidget {
             onPressed: () => cubit.changeOrderStatus(
               order: order,
               status: nextStatus,
-              locationId: cubit.currentUser?.locationId,
+              locationId: order.assignedLocationId,
             ),
           );
         }),
@@ -1168,6 +1199,88 @@ class _StatusBadge extends StatelessWidget {
           fontWeight: FontWeight.bold,
           color: _statusColor(status),
         ),
+      ),
+    );
+  }
+}
+
+class _FutureOrderBadge extends StatelessWidget {
+  const _FutureOrderBadge({required this.order});
+
+  final OrderModel order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.indigo.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.indigo.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.event_available, size: 13, color: Colors.indigo.shade700),
+          const SizedBox(width: 5),
+          Text(
+            futureOrderBadgeText(order),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.indigo.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderTimingBadge extends StatelessWidget {
+  const _OrderTimingBadge({required this.order});
+
+  final OrderModel order;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isFuture = order.isFutureDelivery;
+    final Color color = isFuture
+        ? Colors.indigo.shade700
+        : order.isLate
+        ? Colors.red.shade700
+        : Colors.grey.shade700;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isFuture
+            ? Colors.indigo.shade50
+            : order.isLate
+            ? Colors.red.shade50
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isFuture ? Icons.event_note : Icons.schedule,
+            size: 15,
+            color: color,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            isFuture
+                ? formatOrderDate(order.scheduledDeliveryDate)
+                : '${order.waitingDuration.inMinutes} د',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1419,6 +1532,17 @@ String _statusLabel(String status) {
       return 'ملغي';
     default:
       return status;
+  }
+}
+
+String _deliveryTypeFilterLabel(OrdersDeliveryTypeFilter filter) {
+  switch (filter) {
+    case OrdersDeliveryTypeFilter.all:
+      return 'كل الأنواع';
+    case OrdersDeliveryTypeFilter.current:
+      return 'حالي';
+    case OrdersDeliveryTypeFilter.future:
+      return 'مستقبل';
   }
 }
 
