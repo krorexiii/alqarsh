@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "build": "bash ./scripts/cloudflare_build.sh",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.18.0"
+  }
+}
