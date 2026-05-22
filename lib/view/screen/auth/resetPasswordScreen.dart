@@ -79,7 +79,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             children: <Widget>[
               const MyText(
                 'إعادة تعيين كلمة المرور',
-                fontSize: 30,
+                fontSize: 24,
                 fontWeight: FontWeight.w900,
               ),
               const SizedBox(height: 8),

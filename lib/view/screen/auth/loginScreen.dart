@@ -61,7 +61,7 @@ class LoginScreen extends StatelessWidget {
             children: <Widget>[
               const MyText(
                 'مرحبًا بعودتك',
-                fontSize: 30,
+                fontSize: 24,
                 fontWeight: FontWeight.w900,
               ),
               const SizedBox(height: 8),

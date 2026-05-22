@@ -103,7 +103,7 @@ class AuthShell extends StatelessWidget {
                                   MyText(
                                     title,
                                     color: Colors.white,
-                                    fontSize: 38,
+                                    fontSize: 30,
                                     fontWeight: FontWeight.w900,
                                     height: 1.1,
                                   ),

@@ -84,7 +84,7 @@ class _ContentArea extends StatelessWidget {
             showMenuButton: showMenuButton,
           ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 16),
         Expanded(child: child),
       ],
     );
@@ -111,10 +111,10 @@ class _DashboardHeader extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.86),
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.78)),
         boxShadow: ConstVar.softShadow,
       ),
@@ -130,9 +130,13 @@ class _DashboardHeader extends StatelessWidget {
                 Text(
                   title,
                   style: theme.textTheme.headlineMedium?.copyWith(
+                    fontSize: 22,
+                    height: 1.1,
                     fontWeight: FontWeight.w900,
                     color: ConstVar.textPrimary,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -169,14 +173,14 @@ class _LeadingButton extends StatelessWidget {
           : null,
       borderRadius: BorderRadius.circular(22),
       child: Ink(
-        width: 72,
-        height: 72,
+        width: 56,
+        height: 56,
         decoration: BoxDecoration(
           gradient: isBack ? ConstVar.accentGradient : ConstVar.brandGradient,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: ConstVar.softShadow,
         ),
-        child: Icon(icon, color: Colors.black, size: 30),
+        child: Icon(icon, color: Colors.black, size: 26),
       ),
     );
   }
