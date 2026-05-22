@@ -387,6 +387,16 @@ class SupabaseApi {
   }
 
   Future<void> deleteItemPermanently({required int itemId}) async {
+    final List<dynamic> orderItems = await supabase
+        .from('order_items')
+        .select('id')
+        .eq('item_id', itemId)
+        .limit(1);
+
+    if (orderItems.isNotEmpty) {
+      throw Exception('ITEM_DELETE_BLOCKED_BY_ORDERS');
+    }
+
     final List<dynamic> images = await fetchItemImages(itemId: itemId);
     final List<String> paths = images
         .map((dynamic image) => image['image_path'])
@@ -394,15 +404,27 @@ class SupabaseApi {
         .where((path) => path.isNotEmpty)
         .toList();
 
-    if (paths.isNotEmpty) {
-      await supabase.storage.from('items').remove(paths);
-    }
+    await supabase.from('cart_items').delete().eq('item_id', itemId);
+    await supabase.from('favorites').delete().eq('item_id', itemId);
+    await supabase.from('part_items').delete().eq('item_id', itemId);
+    await supabase.from('item_images').delete().eq('item_id', itemId);
+    await supabase.from('item_colors').delete().eq('item_id', itemId);
+    await supabase.from('item_sizes').delete().eq('item_id', itemId);
 
-    await supabase
+    final List<dynamic> deletedItems = await supabase
         .from('items')
         .delete()
         .eq('id', itemId)
-        .eq('shop_id', shopId);
+        .eq('shop_id', shopId)
+        .select('id');
+
+    if (deletedItems.isEmpty) {
+      throw Exception('ITEM_DELETE_NOT_FOUND_OR_FORBIDDEN');
+    }
+
+    if (paths.isNotEmpty) {
+      await supabase.storage.from('items').remove(paths);
+    }
   }
 
   Future<String> uploadItemImage({

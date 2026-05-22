@@ -571,8 +571,34 @@ class ItemsCubit extends Cubit<ItemsState> {
         ItemsSuccess(permanent ? 'تم حذف المنتج نهائياً' : 'تم أرشفة المنتج'),
       );
     } catch (e) {
-      emit(ItemsError('فشل في حذف المنتج'));
+      emit(
+        ItemsError(
+          permanent
+              ? _permanentDeleteFailureMessage(e)
+              : 'فشل في حذف المنتج',
+        ),
+      );
     }
+  }
+
+  String _permanentDeleteFailureMessage(Object error) {
+    final String rawError = error.toString();
+
+    if (rawError.contains('ITEM_DELETE_BLOCKED_BY_ORDERS') ||
+        rawError.contains('order_items_item_id_fkey')) {
+      return 'لا يمكن حذف المنتج نهائياً لأنه مرتبط بطلبات. يمكنك أرشفته بدلاً من الحذف.';
+    }
+
+    if (rawError.contains('ITEM_DELETE_NOT_FOUND_OR_FORBIDDEN')) {
+      return 'تعذر حذف المنتج نهائياً. قد لا تملك صلاحية الحذف أو أن المنتج لم يعد موجوداً.';
+    }
+
+    if (rawError.contains('foreign key constraint') ||
+        rawError.contains('violates foreign key')) {
+      return 'لا يمكن حذف المنتج نهائياً لأنه مرتبط ببيانات أخرى. استخدم الأرشفة بدلاً من الحذف.';
+    }
+
+    return 'فشل في حذف المنتج نهائياً';
   }
 
   Future<void> restoreSelectedItem() async {
