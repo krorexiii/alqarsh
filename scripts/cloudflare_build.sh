@@ -12,4 +12,18 @@ fi
 flutter --version
 flutter config --enable-web
 flutter pub get
+
+index_file="web/index.html"
+index_backup="$(mktemp)"
+cp "${index_file}" "${index_backup}"
+restore_index() {
+  cp "${index_backup}" "${index_file}"
+  rm -f "${index_backup}"
+}
+trap restore_index EXIT
+
+if ! grep -q '\$FLUTTER_BASE_HREF' "${index_file}"; then
+  perl -0pi -e 's#<base href="/">#<base href="\$FLUTTER_BASE_HREF">#' "${index_file}"
+fi
+
 flutter build web --release --base-href /
